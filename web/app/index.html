@@ -321,6 +321,10 @@ ul.todos button { padding: 4px 8px; font-size: 13px; }
       <h1 style="font-size:34px">Nutri<span>Me</span></h1>
       <h2 id="loginH">Sign in</h2>
       <p class="lead" id="loginLead">Enter your NutriMe passcode. You only need to do this once on this phone.</p>
+      <div id="loginOauth" hidden style="display:flex;flex-direction:column;gap:10px">
+        <button type="button" class="big" id="loginGoogle" style="display:flex;align-items:center;justify-content:center;gap:10px;background:var(--surface)"><svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.7 13.2l7.8 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.9-4.7l-7.8-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>Continue with Google</button>
+        <div class="source" style="margin:0;text-align:center">or use your email</div>
+      </div>
       <input id="loginEmail" class="big" type="email" autocomplete="email" inputmode="email" placeholder="Email" aria-label="Email" hidden>
       <input id="loginPass" class="big" type="password" autocomplete="current-password" placeholder="Passcode" aria-label="Passcode" required>
       <div id="loginLinks" hidden style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><button type="button" class="ghost" id="loginMode" style="padding:2px 4px">New here? Create an account</button><button type="button" class="ghost" id="loginForgot" style="padding:2px 4px">Forgot password?</button></div>
@@ -478,7 +482,7 @@ ul.todos button { padding: 4px 8px; font-size: 13px; }
       </section>
     </div>
   </div>
-  <p class="source" style="margin-top:20px">NutriMe version 1.9 (accounts and sync; Kitchen, Move, Mind, Health and voice Assistant). <a href="#setup">Change your setup</a> · <a href="#signout" id="signOut">Sign out</a>.<span id="acctLine"></span> Nutrition values are per 100 g from USDA FoodData Central (SR Legacy and Foundation Foods), rounded. Items marked "estimate" were filled in by Claude and are less exact. Amounts read from photos are guesses, so check them before relying on the numbers.</p>
+  <p class="source" style="margin-top:20px">NutriMe version 1.10 (Google and email accounts with sync; Kitchen, Move, Mind, Health and voice Assistant). <a href="#setup">Change your setup</a> · <a href="#signout" id="signOut">Sign out</a>.<span id="acctLine"></span> Nutrition values are per 100 g from USDA FoodData Central (SR Legacy and Foundation Foods), rounded. Items marked "estimate" were filled in by Claude and are less exact. Amounts read from photos are guesses, so check them before relying on the numbers.</p>
   </div>
 
   <div id="view-log" hidden>
@@ -1412,7 +1416,7 @@ function needsLogin() {
 }
 function renderLoginMode() {
   const a = acctMode();
-  $("#loginEmail").hidden = !a; $("#loginEmail").required = a; $("#loginLinks").hidden = !a;
+  $("#loginEmail").hidden = !a; $("#loginEmail").required = a; $("#loginLinks").hidden = !a; $("#loginOauth").hidden = !a;
   $("#loginH").textContent = a && signUpMode ? "Create your account" : "Sign in";
   $("#loginLead").textContent = a ? (signUpMode ? "Use your email and a password of at least 8 characters. Your data then follows you to every phone and browser." : "Sign in with your email and password. Your meals, check-ins and settings sync to your account.") : "Enter your NutriMe passcode. You only need to do this once on this phone.";
   $("#loginPass").placeholder = a ? "Password" : "Passcode"; $("#loginPass").setAttribute("aria-label", a ? "Password" : "Passcode");
@@ -1472,6 +1476,28 @@ $("#loginForm").addEventListener("submit", async e => {
   } catch (err) { setStatus($("#loginMsg"), acctMode() ? authCopy(err) : navigator.onLine ? "Couldn't reach NutriMe. Check the address, or try again in a moment." : "You're offline. Connect to the internet to sign in.", false, true); }
   finally { btn.disabled = false; }
 });
+// Google: on the website the page goes to Google and comes back to /app/; in the Android app,
+// Chrome opens (Google doesn't allow sign-in inside apps' web views) and returns via app.nutrime.personal://login.
+const NATIVE_REDIRECT = "app.nutrime.personal://login";
+$("#loginGoogle").addEventListener("click", async () => {
+  if (!navigator.onLine) { setStatus($("#loginMsg"), "You're offline. Connect to the internet to sign in.", false, true); return; }
+  if (isNative) {
+    const Browser = window.Capacitor?.Plugins?.Browser;
+    if (!Browser) { setStatus($("#loginMsg"), "Google sign-in needs the latest NutriMe app.", false, true); return; }
+    setStatus($("#loginMsg"), "Finish signing in in the browser…", true);
+    await Browser.open({ url: window.NMAccount.oauthUrl("google", NATIVE_REDIRECT) });
+  } else location.href = window.NMAccount.oauthUrl("google", location.origin + location.pathname);
+});
+async function completeOAuth(params) {
+  showLogin(true); setStatus($("#loginMsg"), "Signing you in…", true);
+  try { const s = await window.NMAccount.finishOAuth(params); if (!s) throw { code: "oauth" }; await afterSignIn(); }
+  catch (err) { setStatus($("#loginMsg"), err?.msg ? `Google sign-in didn't finish: ${err.msg}` : "Google sign-in didn't finish. Try again.", false, true); }
+}
+if (isNative) window.Capacitor?.Plugins?.App?.addListener("appUrlOpen", ({ url }) => {
+  if (!url || !url.startsWith(NATIVE_REDIRECT)) return;
+  window.Capacitor?.Plugins?.Browser?.close().catch(() => {});
+  completeOAuth(window.NMAccount.parseFrag(url));
+});
 $("#loginMode").addEventListener("click", () => { signUpMode = !signUpMode; setStatus($("#loginMsg"), "", false); renderLoginMode(); });
 $("#loginForgot").addEventListener("click", async () => {
   const email = $("#loginEmail").value.trim(); if (!email) { setStatus($("#loginMsg"), "Type your email first, then tap Forgot password.", false, true); $("#loginEmail").focus(); return; }
@@ -1490,7 +1516,7 @@ window.addEventListener("nutrime-synced", e => {
 });
 window.addEventListener("nutrime-signed-out", () => { initClaude(); if (acctMode()) showLogin(true); });
 setInterval(renderAcct, 30000);
-detectServer().then(() => { showLogin(needsLogin()); if (acctMode() && window.NMAccount.session()) window.NMAccount.sync().catch(() => {}); });
+detectServer().then(() => { const oa = window.NMAccount.takePendingOAuth(); if (oa && acctMode()) { completeOAuth(oa); return; } showLogin(needsLogin()); if (acctMode() && window.NMAccount.session()) window.NMAccount.sync().catch(() => {}); });
 
 window.NM = { login: NM_login, store, fmt, esc, S, setStatus, errCopy, readPhotos, mergeItems, FOOD_NAMES, applySetup, isNative, get current() { return current; }, get sample() { return sample; } };
 import("./move.js").then(() => import("./mind.js")).then(() => import("./journal.js")).then(() => import("./assistant.js")).then(() => import("./onboarding.js")).then(() => import("./smart.js")).catch(e => console.error("NutriMe page failed to load", e));

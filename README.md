@@ -78,3 +78,15 @@ data stays on each device.
 8. Optional: after creating your account, turn off **Authentication > Sign In / Providers > Allow new users to sign up**.
 
 The service-role key is never needed. Never put it in the app or in Netlify.
+
+### Google sign-in (optional)
+
+1. https://console.cloud.google.com > create a project (any name, e.g. NutriMe).
+2. **APIs & Services > OAuth consent screen**: External, app name NutriMe, your email as support and developer contact. Under **Audience** add your Gmail as a test user (or publish the app later).
+3. **APIs & Services > Credentials > Create credentials > OAuth client ID**: type **Web application**.
+   Authorized redirect URI: `https://YOUR-PROJECT.supabase.co/auth/v1/callback` (Supabase shows this exact URL on its Google provider page).
+4. Copy the Client ID and Client secret into **Supabase > Authentication > Sign In / Providers > Google**, turn it on, save.
+5. **Supabase > Authentication > URL Configuration > Redirect URLs**: add `https://nutrime.nl/app/` and `app.nutrime.personal://login` (the Android app).
+6. Add the Google account's email to `ALLOWED_EMAILS` in Netlify if it differs from your other one.
+
+Apple sign-in comes later with the iPhone app (it needs a paid Apple Developer account).

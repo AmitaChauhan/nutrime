@@ -109,12 +109,30 @@
     all.forEach(k => localStorage.removeItem(k));
   }
 
+  // ---------- Google sign-in (Supabase OAuth, tokens come back in the URL) ----------
+  const oauthUrl = (provider, redirect) => cfg ? `${cfg.url}/auth/v1/authorize?provider=${encodeURIComponent(provider)}&redirect_to=${encodeURIComponent(redirect)}` : null;
+  async function finishOAuth(params) {
+    if (params.error || params.error_description) throw { code: params.error || "oauth", msg: params.error_description || params.error };
+    if (!params.access_token) return null;
+    const user = await api("/auth/v1/user", { method: "GET" }, params.access_token);
+    return keep({ access_token: params.access_token, refresh_token: params.refresh_token, expires_in: Number(params.expires_in) || 3600, user });
+  }
+  const parseFrag = href => { const i = href.indexOf("#"), q = href.indexOf("?"); const str = i >= 0 ? href.slice(i + 1) : q >= 0 ? href.slice(q + 1) : ""; return Object.fromEntries(new URLSearchParams(str)); };
+  // On the website the sign-in lands back on /app/#access_token=…; take it out of the address
+  // straight away so nothing else sees it.
+  try {
+    const f = parseFrag(location.hash ? "#" + location.hash.slice(1) : "");
+    if (f.access_token || f.error_description) { sessionStorage.setItem("nutrime.oauth", JSON.stringify(f)); history.replaceState(null, "", location.pathname + "#kitchen"); }
+  } catch {}
+
   document.addEventListener("visibilitychange", () => { if (!session()) return; if (document.hidden) token().then(tok => tok && push(tok, true)).catch(() => {}); else sync().catch(() => {}); });
   window.addEventListener("online", () => session() && sync().catch(() => {}));
 
   window.NMAccount = {
     configure(a) { cfg = a && a.url && a.anon ? { url: String(a.url).replace(/\/+$/, ""), anon: a.anon } : null; if (cfg) raw.set("__auth", cfg); else raw.del("__auth"); },
-    get enabled() { return !!cfg; }, session, token, signIn, signUp, recover, signOut, sync, markDirty,
+    get enabled() { return !!cfg; }, oauthUrl, finishOAuth, parseFrag,
+    takePendingOAuth() { try { const v = sessionStorage.getItem("nutrime.oauth"); sessionStorage.removeItem("nutrime.oauth"); return v ? JSON.parse(v) : null; } catch { return null; } },
+    session, token, signIn, signUp, recover, signOut, sync, markDirty,
     lastSynced: () => raw.get("__synced", 0), pending: () => raw.get("__dirty", []).length,
   };
 })();

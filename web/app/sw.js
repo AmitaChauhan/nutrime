@@ -1,5 +1,5 @@
 // Keeps the app shell available offline. Claude calls always go to the network.
-const CACHE = "nutrime-app-v15";
+const CACHE = "nutrime-app-v16";
 const SHELL = ["./", "index.html", "anthropic-sdk.js", "journal.js", "move.js", "mind.js", "assistant.js", "onboarding.js", "smart.js", "config.js", "sync.js", "native-health.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith("nutrime-app-") && k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
