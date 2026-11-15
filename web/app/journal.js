@@ -9,6 +9,7 @@ export const METRICS = [
   { k: "mood", label: "Mood", lo: "Low", hi: "Great", color: "var(--protein)" },
   { k: "digestion", label: "Digestion", lo: "Bloated or upset", hi: "Comfortable", color: "var(--fiber)" },
   { k: "sleep", label: "Sleep last night", lo: "Poor", hi: "Great", color: "var(--fat)", prevDay: true },
+  { k: "self", label: "How you feel about yourself", short: "Self-image", lo: "Hard on myself", hi: "Kind to myself", color: "var(--accent)" },
 ];
 const SYMPTOMS = ["Headache", "Bloating", "Gas", "Acid reflux", "Cravings", "Brain fog", "Tiredness", "Skin flare-up", "Nausea"];
 const HEALTH = [
@@ -112,7 +113,7 @@ function renderDiary() {
     const kcal = dm.reduce((s, m) => s + m.k, 0);
     return `<article class="day"><div class="day-h"><b>${esc(niceDay(d))}</b><span class="eyebrow">${dm.length ? fmt(kcal) + " kcal" : ""}</span></div>
       ${dm.map(m => `<div class="meal"><span class="t">${new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><span class="n">${esc(m.title)}<small>${esc(m.items.map(i => i.name.split(/[,(/]/)[0].trim()).join(", "))}</small></span><span class="k">${fmt(m.k)} kcal · ${fmt(m.p)} g P</span><button class="ghost del" type="button" data-del="${m.id}" aria-label="Delete meal">✕</button></div>`).join("")}
-      ${c ? `<div class="pills">${METRICS.filter(m => c[m.k]).map(m => `<span class="pill" style="--c:${m.color}">${esc(m.label.split(" ")[0])} ${c[m.k]}/5</span>`).join("")}${(c.symptoms || []).map(s => `<span class="pill warn">${esc(s)}</span>`).join("")}</div>${c.note ? `<p class="note">${esc(c.note)}</p>` : ""}` : `<p class="empty small">No check-in.</p>`}
+      ${c ? `<div class="pills">${METRICS.filter(m => c[m.k]).map(m => `<span class="pill" style="--c:${m.color}">${esc(m.short || m.label.split(" ")[0])} ${c[m.k]}/5</span>`).join("")}${(c.symptoms || []).map(s => `<span class="pill warn">${esc(s)}</span>`).join("")}</div>${c.note ? `<p class="note">${esc(c.note)}</p>` : ""}` : `<p class="empty small">No check-in.</p>`}
       ${acts.filter(a => a.day === d).length ? `<div class="hline">${acts.filter(a => a.day === d).map(a => `${esc(a.title)} ${a.minutes} min`).join(" · ")}</div>` : ""}
       ${h ? `<div class="hline">${HEALTH.filter(x => h[x.k] != null).map(x => `${esc(x.label)} ${fmt(h[x.k], x.d)}${x.unit}`).join(" · ")}</div>` : ""}
     </article>`;
@@ -126,7 +127,7 @@ $("#diary").addEventListener("click", e => {
 
 // ---------- backup ----------
 $("#bkSave").addEventListener("click", () => {
-  const data = { app: "nutrime", version: 1, exported: new Date().toISOString(), meals: db.meals(), checkins: db.checkins(), health: db.health() };
+  const data = { app: "nutrime", version: 1, exported: new Date().toISOString(), meals: db.meals(), checkins: db.checkins(), health: db.health(), activities: store.get("activities", []), mind: store.get("mind", []), myAffirmations: store.get("myAffirmations", []), favAffirmations: store.get("favAffirmations", []) };
   const blob = new Blob([JSON.stringify(data, null, 1)], { type: "application/json" });
   const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `nutrime-backup-${dayKey(new Date())}.json`; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
@@ -140,6 +141,9 @@ $("#bkFile").addEventListener("change", async e => {
     db.saveMeals([...db.meals(), ...(d.meals || []).filter(m => m && m.id && !ids.has(m.id))]);
     db.saveCheckins({ ...(d.checkins || {}), ...db.checkins() });
     db.saveHealth({ ...(d.health || {}), ...db.health() });
+    for (const k of ["activities", "mind"]) { const have = store.get(k, []), seen = new Set(have.map(x => x.id)); store.set(k, [...have, ...(d[k] || []).filter(x => x && x.id && !seen.has(x.id))]); }
+    for (const k of ["myAffirmations", "favAffirmations"]) store.set(k, [...new Set([...store.get(k, []), ...(d[k] || []).filter(x => typeof x === "string")])]);
+    if (NM.renderMove) NM.renderMove(); if (NM.renderMind) NM.renderMind();
     NM.setStatus($("#bkMsg"), "Backup restored. Entries already on this phone were kept.", false); renderLog();
   } catch { NM.setStatus($("#bkMsg"), "That file isn't a NutriMe backup.", false, true); }
 });
@@ -206,9 +210,11 @@ export function analyse() {
   const acts = store.get("activities", []);
   const actDays = {}; for (const a of acts) (actDays[a.type] || (actDays[a.type] = {}))[a.day] = ((actDays[a.type] || {})[a.day] || 0) + a.minutes;
   const anyDays = {}; for (const a of acts) anyDays[a.day] = (anyDays[a.day] || 0) + a.minutes;
+  for (const e of store.get("mind", [])) (actDays.mind || (actDays.mind = {}))[e.day] = 1;
   const actFx = [];
-  const ACT_LABEL = { meditation: "meditation", yoga: "yoga", workout: "a workout", walk: "a walk", other: "other activity", any: "any activity" };
+  const ACT_LABEL = { meditation: "meditation", yoga: "yoga", workout: "a workout", walk: "a walk", other: "other activity", any: "any activity", mind: "a Mind practice (win, reframe or kind words)" };
   for (const [type, map] of [...Object.entries(actDays), ["any", anyDays]]) for (const m of METRICS) {
+    if (type === "any" && !Object.keys(map).length) continue;
     const yes = [], no = [];
     for (const d of ciDays) { const v = cis[d][m.k]; if (!v) continue; (map[m.prevDay ? addDays(d, -1) : d] ? yes : no).push(v); }
     if (yes.length >= 3 && no.length >= 3) { const diff = mean(yes) - mean(no); if (Math.abs(diff) >= 0.4) actFx.push({ type, label: ACT_LABEL[type] || type, m, diff, nYes: yes.length, nNo: no.length, a: mean(yes), b: mean(no) }); }
@@ -241,7 +247,7 @@ function chart(cis, food) {
   const grid = [1, 2, 3, 4, 5].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${v}</text>`).join("");
   const ticks = [0, 7, 14, 21, 29].map(i => `<text x="${x(i)}" y="${H - 2}" text-anchor="middle" font-size="11" fill="var(--muted)">${niceDay(days[i])}</text>`).join("");
   return `<div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:420px" role="img" aria-label="How you felt over the last 30 days, scores 1 to 5, with daily calories as grey bars">${grid}${bars}${lines}${ticks}</svg></div>
-    <div class="legend">${METRICS.map(m => `<span style="--c:${m.color}">${esc(m.label)}</span>`).join("")}<span style="--c:var(--line)">Calories eaten</span></div>`;
+    <div class="legend">${METRICS.map(m => `<span style="--c:${m.color}">${esc(m.short || m.label)}</span>`).join("")}<span style="--c:var(--line)">Calories eaten</span></div>`;
 }
 
 let lastAnalysis = null;
@@ -309,6 +315,7 @@ $("#exBtn").addEventListener("click", () => {
     const c = db.checkins(); for (const k in c) if (c[k].example) delete c[k]; db.saveCheckins(c);
     const h = db.health(); for (const k in h) if (h[k].example) delete h[k]; db.saveHealth(h);
     store.set("activities", store.get("activities", []).filter(a => !a.example));
+    store.set("mind", store.get("mind", []).filter(a => !a.example));
   } else {
     const menu = [
       { title: "Chickpea curry with rice", items: [["Chickpeas, cooked or canned", "legume", 200], ["White rice, cooked", "grain", 180], ["Onion", "aromatic", 80], ["Tomato", "veg", 120]], k: 640, p: 22, c: 105, f: 14, fi: 16 },
@@ -328,19 +335,21 @@ $("#exBtn").addEventListener("click", () => {
       const steps = Math.round(4000 + rnd() * 7000);
       const didYoga = rnd() > 0.55, didMed = rnd() > 0.5;
       if (didYoga) acts.push({ id: uid(), example: true, type: "yoga", title: "Gentle digestion flow", minutes: 10, day, at: new Date(day + "T18:30").toISOString(), completed: true });
+      if (rnd() > 0.5) { const ms = store.get("mind", []); ms.push({ id: uid(), example: true, kind: "win", text: "Cooked at home", day, at: new Date(day + "T20:00").toISOString() }); store.set("mind", ms); cis[day] && (cis[day].self = cis[day].self); var didMind = true; } else var didMind = false;
       if (didMed) acts.push({ id: uid(), example: true, type: "meditation", title: "Calm breathing", minutes: 5, day, at: new Date(day + "T21:30").toISOString(), completed: true });
-      if (!cis[day]) cis[day] = { example: true, energy: Math.max(1, Math.min(5, Math.round(2.6 + (chicken ? 1 : 0) + steps / 9000 + rnd() - 0.5))), mood: Math.max(1, Math.min(5, Math.round(2.8 + (didMed ? 0.9 : 0) + rnd() * 1.2 - 0.5))), digestion: Math.max(1, Math.min(5, Math.round((chick ? 2.2 : 3.9) + (didYoga ? 0.7 : 0) + rnd() - 0.5))), sleep: Math.max(1, Math.min(5, Math.round(3 + rnd() * 1.5 - 0.5))), symptoms: chick && rnd() > 0.3 ? ["Bloating"] : [], note: "" };
+      if (!cis[day]) cis[day] = { example: true, energy: Math.max(1, Math.min(5, Math.round(2.6 + (chicken ? 1 : 0) + steps / 9000 + rnd() - 0.5))), mood: Math.max(1, Math.min(5, Math.round(2.8 + (didMed ? 0.9 : 0) + rnd() * 1.2 - 0.5))), digestion: Math.max(1, Math.min(5, Math.round((chick ? 2.2 : 3.9) + (didYoga ? 0.7 : 0) + rnd() - 0.5))), sleep: Math.max(1, Math.min(5, Math.round(3 + rnd() * 1.5 - 0.5))), self: Math.max(1, Math.min(5, Math.round(2.6 + (didMind ? 1 : 0) + (didMed ? 0.4 : 0) + rnd() - 0.5))), symptoms: chick && rnd() > 0.3 ? ["Bloating"] : [], note: "" };
       if (!hl[day]) hl[day] = { example: true, steps, sleepH: Math.round((6 + rnd() * 2.5) * 10) / 10, restHR: Math.round(60 + rnd() * 8) };
     }
     db.saveMeals(meals); db.saveCheckins(cis); db.saveHealth(hl); store.set("activities", acts);
   }
-  renderLog(); renderInsights(); NM.renderMove?.();
+  renderLog(); renderInsights(); NM.renderMove?.(); NM.renderMind?.();
 });
 
 // ---------- views ----------
 export function renderLog() { renderCheckin(); renderDiary(); $("#hBox").hidden = !window.NutriHealthSync; }
 const ROUTES = {
   kitchen: { view: "cook", page: "kitchen", name: "Kitchen", tag: "Snap what you have. See the nutrition, get portions that fit your targets, and a recipe to cook them." },
+  mind: { view: "mind", page: "mind", name: "Mind", tag: "Small daily practices for a kinder, steadier view of yourself." },
   move: { view: "move", page: "move", name: "Move", tag: "Breathe, stretch and move. Every session shows up in your Health insights." },
   health: { view: "log", page: "health", name: "Health", tag: "Log what you ate and how you feel, and see which foods suit you." },
   insights: { view: "insights", page: "health", name: "Health", tag: "Log what you ate and how you feel, and see which foods suit you." },
@@ -349,12 +358,13 @@ const ALIASES = { cook: "kitchen", log: "health" };
 function route() {
   let h = location.hash.slice(1); h = ALIASES[h] || h;
   const r = ROUTES[h] || ROUTES.kitchen;
-  ["cook", "move", "log", "insights"].forEach(k => { $("#view-" + k).hidden = k !== r.view; });
+  ["cook", "move", "mind", "log", "insights"].forEach(k => { $("#view-" + k).hidden = k !== r.view; });
   document.querySelectorAll(".bottomnav a").forEach(a => a.setAttribute("aria-current", a.dataset.page === r.page ? "page" : "false"));
   $("#pageName").textContent = r.name; $("#pageTag").textContent = r.tag;
   document.title = "NutriMe " + r.name;
   if (r.view === "log") renderLog();
   if (r.view === "move") NM.renderMove?.();
+  if (r.view === "mind") NM.renderMind?.();
   if (r.view === "insights") renderInsights();
   window.scrollTo(0, 0);
 }

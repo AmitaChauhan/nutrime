@@ -89,7 +89,7 @@ dialog.gate input { width: 100%; font-size: 16px; }
 dialog.gate .acts { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 
 /* Tabs */
-.bottomnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding: 6px max(16px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.bottomnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
 .bottomnav a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; color: var(--muted); text-decoration: none; font-size: 12px; font-weight: 600; border-radius: 10px; }
 .bottomnav a svg { width: 24px; height: 24px; }
 .bottomnav a[aria-current="page"] { color: var(--accent); }
@@ -163,6 +163,16 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .breathe .phase { position: relative; font-weight: 600; font-size: 18px; }
 @media (prefers-reduced-motion: reduce) { .breathe .circle, .player .pl-bar i { transition: none; } }
 .updatebar { position: fixed; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--ink); color: var(--bg); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+/* Mind */
+.affirm { font-family: var(--display); font-weight: 800; font-size: clamp(20px, 5.5vw, 26px); line-height: 1.25; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.plain { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.step-lab { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; }
+.step-lab span.q { font-weight: 400; color: var(--muted); font-size: 13px; }
+.mentry { position: relative; border-bottom: 1px solid var(--line); padding-bottom: 10px; display: flex; flex-direction: column; gap: 4px; }
+.mentry p { margin: 0; font-size: 14px; }
+.mentry .was { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+.mentry .del { position: absolute; right: 0; bottom: 6px; padding: 2px 4px; font-size: 12px; }
+.mentry .pill::before { display: none; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; opacity: 0; }
 .thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
 .thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
@@ -263,6 +273,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   <nav class="bottomnav" aria-label="NutriMe">
     <a href="#kitchen" data-page="kitchen" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3v8a3 3 0 0 0 3 3v7M9 3v5M12 3v8a3 3 0 0 1-3 3"/><path d="M18 21V3c-2.2 1.2-3 3.7-3 7v4h3"/></svg>Kitchen</a>
     <a href="#move" data-page="move"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v6M5 10l7 2 7-2M8 21l4-8 4 8"/></svg>Move</a>
+    <a href="#mind" data-page="mind"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.4 5.9.9-4.3 4.1 1 5.9L12 16.5 6.8 19.3l1-5.9L3.5 9.3l5.9-.9z"/></svg>Mind</a>
     <a href="#health" data-page="health"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 1 0-7.1 7.1L12 21.5l8.8-8.8a5 5 0 0 0 0-7.1z"/><path d="M3.5 12h4l2-3 3 6 2-3h6"/></svg>Health</a>
   </nav>
 
@@ -399,7 +410,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       </section>
     </div>
   </div>
-  <p class="source" style="margin-top:20px">NutriMe version 1.4 (Kitchen, Move and Health). Nutrition values are per 100 g from USDA FoodData Central (SR Legacy and Foundation Foods), rounded. Items marked "estimate" were filled in by Claude and are less exact. Amounts read from photos are guesses, so check them before relying on the numbers.</p>
+  <p class="source" style="margin-top:20px">NutriMe version 1.5 (Kitchen, Move, Mind and Health). Nutrition values are per 100 g from USDA FoodData Central (SR Legacy and Foundation Foods), rounded. Items marked "estimate" were filled in by Claude and are less exact. Amounts read from photos are guesses, so check them before relying on the numbers.</p>
   </div>
 
   <div id="view-log" hidden>
@@ -470,6 +481,54 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       </div>
     </div>
     <p class="source" style="margin-top:16px">Move gently and stop if anything hurts. If you have an injury, a heart or blood pressure condition, or are pregnant, check with a doctor first.</p>
+  </div>
+
+  <div id="view-mind" hidden>
+    <div class="grid">
+      <div class="col">
+        <section class="panel" aria-labelledby="h-aff">
+          <div class="panel-head"><h2 id="h-aff">Today's words</h2><span class="eyebrow">Read it out loud</span></div>
+          <p class="affirm" id="mdAff"></p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" id="mdFav" aria-pressed="false">☆ Save</button><button type="button" class="ghost" id="mdNext">Show another</button></div>
+          <div id="mdFavs"></div>
+          <div class="row2" style="align-items:stretch">
+            <input id="mdOwn" type="text" placeholder="Write your own, e.g. I'm becoming someone who looks after herself" style="flex:1 1 220px" aria-label="Your own affirmation">
+            <button type="button" id="mdOwnSave">Add mine</button>
+          </div>
+        </section>
+        <section class="panel" aria-labelledby="h-reframe">
+          <h2 id="h-reframe">Reframe a harsh thought</h2>
+          <p class="source" style="margin:0">When your inner critic gets loud, write it down and look at it from the outside.</p>
+          <label class="step-lab" for="mdThought">1. The thought<span class="q">Write it exactly as it sounds in your head.</span>
+            <textarea id="mdThought" rows="2" placeholder="For example: I ruined everything by eating that cake"></textarea></label>
+          <label class="step-lab" for="mdFriend">2. Look again<span class="q" id="mdFriendQ"></span>
+            <textarea id="mdFriend" rows="2"></textarea></label>
+          <div><button type="button" class="ghost" id="mdFriendNext" style="padding:4px 0">Try a different question</button></div>
+          <label class="step-lab" for="mdKinder">3. A kinder, truer thought<span class="q">Not fake positivity. Something balanced you can believe.</span>
+            <textarea id="mdKinder" rows="2" placeholder="For example: One slice of cake is just one moment. I can enjoy it and carry on."></textarea></label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="primary" id="mdReframeSave">Save reframe</button><button type="button" id="mdAiHelp">Help me reframe</button></div>
+          <p class="source" style="margin:0">"Help me reframe" sends only the thought in step 1 to your AI connection. Everything else stays on this phone.</p>
+          <div class="status" id="mdReMsg" hidden></div>
+        </section>
+      </div>
+      <div class="col">
+        <section class="panel" aria-labelledby="h-mdweek"><h2 id="h-mdweek">This week</h2><div id="mdWeek"></div></section>
+        <section class="panel" aria-labelledby="h-wins">
+          <h2 id="h-wins">Wins that aren't about the scale</h2>
+          <div class="chips" id="mdWinIdeas"></div>
+          <div class="row2" style="align-items:stretch"><input id="mdWin" type="text" placeholder="Something that went well today" style="flex:1 1 200px" aria-label="Today's win"><button type="button" class="primary" id="mdWinSave">Save win</button></div>
+          <div class="status" id="mdWinMsg" hidden></div>
+        </section>
+        <section class="panel" aria-labelledby="h-kind">
+          <h2 id="h-kind">Kind words to yourself</h2>
+          <p class="source" style="margin:0">Name one thing you like about yourself, or thank your body for something it did today.</p>
+          <div class="row2" style="align-items:stretch"><input id="mdKind" type="text" placeholder="For example: My legs carried me up the stairs without stopping" style="flex:1 1 200px" aria-label="Kind words"><button type="button" class="primary" id="mdKindSave">Save</button></div>
+          <div class="status" id="mdKindMsg" hidden></div>
+        </section>
+        <section class="panel" aria-labelledby="h-mdrecent"><h2 id="h-mdrecent">Your collection</h2><div class="diary" id="mdRecent"></div></section>
+      </div>
+    </div>
+    <p class="source" style="margin-top:16px">If thoughts about food, weight or your body feel overwhelming, or you're restricting, bingeing or purging, you deserve real support. Please talk to your doctor (huisarts) or an eating-disorder or mental-health service. You don't have to sort it out alone.</p>
   </div>
 
   <div class="player" id="player" hidden role="dialog" aria-modal="true" aria-labelledby="plStep">
@@ -1205,7 +1264,7 @@ initClaude();
 detectServer();
 
 window.NM = { store, fmt, esc, S, setStatus, errCopy, get current() { return current; }, get sample() { return sample; } };
-import("./move.js").then(() => import("./journal.js")).catch(e => console.error("NutriMe page failed to load", e));
+import("./move.js").then(() => import("./mind.js")).then(() => import("./journal.js")).catch(e => console.error("NutriMe page failed to load", e));
 
 if (isNative) {
   const sc = document.createElement("script"); sc.type = "module"; sc.src = "native-health.js"; document.head.appendChild(sc);
