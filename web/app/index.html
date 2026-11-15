@@ -184,6 +184,11 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .askbar input { flex: 1; min-width: 0; }
 .askbar .icon { padding: 8px 10px; display: inline-flex; }
 .askbar .icon svg { width: 20px; height: 20px; }
+.askbar .mic { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); border-radius: 999px; padding: 12px; }
+.askbar .mic svg { width: 24px; height: 24px; }
+.askbar .mic.rec { background: var(--fat); border-color: var(--fat); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--fat) 50%, transparent); } 50% { box-shadow: 0 0 0 8px transparent; } }
+@media (prefers-reduced-motion: reduce) { .askbar .mic.rec { animation: none; } }
 .today { display: flex; flex-wrap: wrap; gap: 6px; }
 .today a, .today span { font-size: 13px; padding: 5px 10px; border-radius: 999px; background: var(--sunk); color: var(--ink); text-decoration: none; }
 .today .due { background: var(--warn-bg); color: var(--warn); }
@@ -471,7 +476,7 @@ ul.todos button { padding: 4px 8px; font-size: 13px; }
       </section>
     </div>
   </div>
-  <p class="source" style="margin-top:20px">NutriMe version 1.7 (Kitchen, Move, Mind, Health and Assistant). <a href="#setup">Change your setup</a> · <a href="#signout" id="signOut">Sign out</a>. Nutrition values are per 100 g from USDA FoodData Central (SR Legacy and Foundation Foods), rounded. Items marked "estimate" were filled in by Claude and are less exact. Amounts read from photos are guesses, so check them before relying on the numbers.</p>
+  <p class="source" style="margin-top:20px">NutriMe version 1.8 (Kitchen, Move, Mind, Health and voice Assistant). <a href="#setup">Change your setup</a> · <a href="#signout" id="signOut">Sign out</a>. Nutrition values are per 100 g from USDA FoodData Central (SR Legacy and Foundation Foods), rounded. Items marked "estimate" were filled in by Claude and are less exact. Amounts read from photos are guesses, so check them before relying on the numbers.</p>
   </div>
 
   <div id="view-log" hidden>
@@ -553,13 +558,15 @@ ul.todos button { padding: 4px 8px; font-size: 13px; }
         <button type="button" class="chip" data-q="How am I doing?">How am I doing?</button>
         <button type="button" class="chip" data-q="Plan my day">Plan my day</button>
       </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span class="source" style="margin:0">Tap the mic and say everything on your mind. Tap again to send.</span><button type="button" class="ghost" id="asSpeak" aria-pressed="true">🔊 Read answers aloud</button></div>
       <form class="askbar" id="asForm">
         <button type="button" class="icon" id="asCam" aria-label="Photo of your fridge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+        <button type="button" class="icon mic" id="asMic" aria-label="Speak" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
         <input id="asIn" type="text" placeholder="Ask, or add a to-do" aria-label="Message" autocomplete="off" enterkeyhint="send">
         <button type="submit" class="primary">Send</button>
       </form>
       <input type="file" id="asPhoto" class="vh" accept="image/*" capture="environment" tabindex="-1">
-      <p class="source" style="margin:0">When you send, your message and a short summary of your recent log go to the AI. To-dos, reminders and chat history stay on this phone.</p>
+      <p class="source" style="margin:0">When you send, your message, a short summary of your recent log and today's calendar go to the AI. To-dos, reminders and chat history stay on this phone.</p>
     </section>
     <div class="grid">
       <section class="panel" aria-labelledby="h-todo">
@@ -576,6 +583,10 @@ ul.todos button { padding: 4px 8px; font-size: 13px; }
         <h2 id="h-rem">Reminders</h2>
         <label class="rem"><input type="checkbox" id="remCi"> Check in at <input type="time" id="remCiT" value="20:30" aria-label="Check-in reminder time"></label>
         <label class="rem"><input type="checkbox" id="remMv"> Move at <input type="time" id="remMvT" value="18:00" aria-label="Move reminder time"></label>
+        <label class="rem"><input type="checkbox" id="remSmart"> Nudge me in free moments</label>
+        <label class="rem" style="padding-left:30px">Daily steps goal <input type="number" id="stepGoal" inputmode="numeric" min="1000" max="40000" step="500" value="10000" style="width:110px" aria-label="Daily steps goal"></label>
+        <div class="row2" id="calBox" style="align-items:center"><button type="button" id="calConnect">Connect calendar</button><span class="source" id="calState" style="margin:0"></span></div>
+        <div id="smartNow"></div>
         <div><button type="button" id="remAllow" hidden>Allow notifications</button></div>
         <p class="source" id="remNote" style="margin:0"></p>
       </section>
@@ -1400,7 +1411,7 @@ $("#signOut").addEventListener("click", e => { e.preventDefault(); store.set("pa
 detectServer().then(() => showLogin(needsLogin()));
 
 window.NM = { login: NM_login, store, fmt, esc, S, setStatus, errCopy, readPhotos, mergeItems, FOOD_NAMES, applySetup, isNative, get current() { return current; }, get sample() { return sample; } };
-import("./move.js").then(() => import("./mind.js")).then(() => import("./journal.js")).then(() => import("./assistant.js")).then(() => import("./onboarding.js")).catch(e => console.error("NutriMe page failed to load", e));
+import("./move.js").then(() => import("./mind.js")).then(() => import("./journal.js")).then(() => import("./assistant.js")).then(() => import("./onboarding.js")).then(() => import("./smart.js")).catch(e => console.error("NutriMe page failed to load", e));
 
 if (isNative) {
   const sc = document.createElement("script"); sc.type = "module"; sc.src = "native-health.js"; document.head.appendChild(sc);

@@ -74,11 +74,13 @@ const STEPS = [
   { // 6. health + reminders
     html: () => `<h2 id="onbH">Stay on track</h2>
       ${NM.isNative && window.NutriHealthSync ? `<div class="panel" style="gap:8px"><b>Health Connect</b><span class="source" style="margin:0">Bring in steps, sleep, resting heart rate and weight. It stays on this phone.</span><div><button type="button" id="obHealth">Connect Health Connect</button></div><div class="status" id="obHMsg" hidden></div></div>` : ""}
+      ${NM.isNative && window.Capacitor?.Plugins?.CapacitorCalendar ? `<div class="panel" style="gap:8px"><b>Calendar</b><span class="source" style="margin:0">Let NutriMe see when you're free, so it can suggest a walk or a breather in the gaps. Read only, stays on this phone.</span><div><button type="button" id="obCal">Connect calendar</button></div></div>` : ""}
       <p class="lead">Gentle nudges, at most once a day each. Skipped automatically when you've already done it (on the website).</p>
       <label class="rem"><input type="checkbox" id="obCi" ${d.ci.on ? "checked" : ""}> Check in at <input type="time" id="obCiT" value="${d.ci.t}" aria-label="Check-in reminder time"></label>
       <label class="rem"><input type="checkbox" id="obMv" ${d.mv.on ? "checked" : ""}> Move at <input type="time" id="obMvT" value="${d.mv.t}" aria-label="Move reminder time"></label>`,
     read: () => { d.ci = { on: $("#obCi").checked, t: $("#obCiT").value || "20:30" }; d.mv = { on: $("#obMv").checked, t: $("#obMvT").value || "18:00" }; },
     click: async e => {
+      if (e.target.closest("#obCal")) { const b = $("#obCal"); try { const { result } = await window.Capacitor.Plugins.CapacitorCalendar.requestReadOnlyCalendarAccess(); if (result === "granted") { store.set("smart", { ...store.get("smart", {}), cal: true, on: true }); b.textContent = "✓ Calendar connected"; b.disabled = true; } } catch {} return; }
       if (!e.target.closest("#obHealth")) return;
       const btn = $("#obHealth"); btn.disabled = true; NM.setStatus($("#obHMsg"), "Connecting…", true);
       try { await NM.syncHealth(); NM.setStatus($("#obHMsg"), ($("#hMsg")?.innerText || "Connected.").trim(), false); }

@@ -356,7 +356,7 @@ const ROUTES = {
   mind: { view: "mind", page: "mind", name: "Mind", tag: "Small daily practices for a kinder, steadier view of yourself." },
   move: { view: "move", page: "move", name: "Move", tag: "Breathe, stretch and move. Every session shows up in your Health insights." },
   health: { view: "log", page: "health", name: "Health", tag: "Log what you ate and how you feel, and see which foods suit you." },
-  assistant: { view: "ask", page: "assistant", name: "Assistant", tag: "Short answers, meals from your fridge, reminders and to-dos." },
+  assistant: { view: "ask", page: "assistant", name: "Assistant", tag: "Just talk: it turns what you say into to-dos and reminders, plans meals and finds time to move." },
   insights: { view: "insights", page: "health", name: "Health", tag: "Log what you ate and how you feel, and see which foods suit you." },
 };
 const ALIASES = { cook: "kitchen", log: "health", ask: "assistant" };

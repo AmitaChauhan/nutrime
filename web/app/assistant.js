@@ -20,9 +20,9 @@ const chat = () => store.get("chat", []);
 const rem = () => ({ ci: { on: false, t: "20:30" }, mv: { on: false, t: "18:00" }, ...store.get("reminders", {}) });
 function say(role, text, acts) { const c = chat(); c.push({ role, text, acts: acts || [], at: Date.now() }); store.set("chat", c.slice(-30)); renderChat(); }
 
-function addTodo(text, day, time) {
+function addTodo(text, day, time, list) {
   text = String(text || "").trim().slice(0, 200); if (!text) return null;
-  const t = { id: uid(), text, day: /^\d{4}-\d{2}-\d{2}$/.test(day || "") ? day : (time ? today() : ""), time: /^\d{2}:\d{2}$/.test(time || "") ? time : "", done: false, at: Date.now() };
+  const t = { id: uid(), text, day: /^\d{4}-\d{2}-\d{2}$/.test(day || "") ? day : (time ? today() : ""), time: /^\d{2}:\d{2}$/.test(time || "") ? time : "", done: false, at: Date.now(), list: String(list || "").slice(0, 40) };
   saveTodos([...todos(), t]); renderTodos(); renderToday(); return t;
 }
 const checkedIn = () => !!store.get("checkins", {})[today()];
@@ -43,6 +43,7 @@ function renderToday() {
   bits.push(checkedIn() ? `<span class="ok">✓ Checked in</span>` : `<a href="#health" class="${rem().ci.on && nowHM() >= rem().ci.t ? "due" : ""}">Check in today</a>`);
   const mv = movedToday();
   bits.push(mv ? `<span class="ok">✓ Moved ${mv} min</span>` : `<a href="#move" class="${rem().mv.on && nowHM() >= rem().mv.t ? "due" : ""}">Move today</a>`);
+  if (NM.nudge) bits.unshift(`<a class="due nudge" href="${esc(NM.nudge.href)}">${esc(NM.nudge.title)}</a>`);
   const due = dueTodos(); if (due.length) bits.push(`<span class="due">${due.length} to-do${due.length > 1 ? "s" : ""} due</span>`);
   $("#asToday").innerHTML = bits.join("");
 }
@@ -55,7 +56,7 @@ function renderChat() {
 function renderTodos() {
   const all = todos().slice().sort((a, b) => (a.done - b.done) || ((a.day || "9") + a.time).localeCompare((b.day || "9") + b.time) || a.at - b.at);
   $("#asTodos").innerHTML = all.length ? all.map(t => `<li class="${t.done ? "done" : ""}"><input type="checkbox" data-tdone="${t.id}" ${t.done ? "checked" : ""} aria-label="Done: ${esc(t.text)}">
-    <span>${esc(t.text)}${t.day ? `<small>${esc(niceDue(t))}</small>` : ""}</span>
+    <span>${esc(t.text)}${t.day || t.list ? `<small>${esc([t.list, niceDue(t)].filter(Boolean).join(" · "))}</small>` : ""}</span>
     ${!t.done ? `<a class="ghost" href="${esc(gcalUrl(t))}" target="_blank" rel="noopener" aria-label="Add to Google Calendar" title="Add to Google Calendar">📅</a>` : ""}
     <button type="button" class="ghost" data-tdel="${t.id}" aria-label="Delete">✕</button></li>`).join("") : `<li><span class="empty">Nothing yet. Type one above, or tell the assistant, e.g. "remind me to buy oats tomorrow".</span></li>`;
   $("#asClearDone").hidden = !all.some(t => t.done);
@@ -69,7 +70,7 @@ function renderRem() {
     : perm === "none" ? "This browser can't show notifications, so reminders show at the top of this page."
     : "On the website, reminders pop up while NutriMe is open (or still in the background). The Android app sends them even when it's closed.";
 }
-function renderAsk() { renderToday(); renderChat(); renderTodos(); renderRem(); }
+function renderAsk() { renderToday(); renderChat(); renderTodos(); renderRem(); renderSpeak?.(); }
 
 // ---------- context for the AI (kept short) ----------
 function context() {
@@ -102,7 +103,7 @@ ${days.join("\n") || "nothing logged"}
 Patterns from their log (correlations, not proof): ${insights.join("; ") || "not enough data yet"}
 Ingredients in Kitchen now: ${rows.map(r => `${short(r.name)} ${r.qty}${r.unit}`).join(", ") || "none"}
 Open to-dos: ${open.map(x => `[${x.id}] ${x.text}${x.day ? ` (${x.day}${x.time ? " " + x.time : ""})` : ""}`).join("; ") || "none"}
-Reminders: check-in ${rem().ci.on ? rem().ci.t : "off"}, move ${rem().mv.on ? rem().mv.t : "off"}.`;
+${NM.calText ? `Calendar today: ${NM.calText}\n` : ""}${NM.stepsText ? `${NM.stepsText}\n` : ""}Reminders: check-in ${rem().ci.on ? rem().ci.t : "off"}, move ${rem().mv.on ? rem().mv.t : "off"}.`;
 }
 
 // ---------- local answers (work without AI, and keep things fast) ----------
@@ -126,7 +127,7 @@ function localAnswer(q) {
 
 // ---------- talking to the AI ----------
 let busy = false;
-async function ask(q) {
+async function ask(q, opts = {}) {
   q = q.trim(); if (!q || busy) return;
   say("me", q);
   const local = localAnswer(q); if (local) { say("ai", local.text, local.acts); return; }
@@ -137,19 +138,22 @@ async function ask(q) {
 Rules: reply in at most 2 short sentences (lists: at most 4 items, a few words each). Plain words, no filler, no emojis. Encourage, never shame; no diet-culture talk about weight loss or "good/bad" food; don't diagnose. If something sounds medical or like they're struggling a lot, gently suggest their GP (huisarts).
 You can act by adding actions:
 - {"type":"add_todo","text":string,"day":"YYYY-MM-DD" or "","time":"HH:MM" or ""} for to-dos, plans and calendar items (resolve "tomorrow", weekdays etc. from Now)
+- {"type":"checklist","title":string,"items":[string]} for a list of steps or things to get (shopping, packing, a routine)
 - {"type":"done_todo","id":string}
 - {"type":"kitchen","items":[{"name":string,"qty":number,"unit":"g"|"ml"|"pc"|"cup"|"tbsp"}]} when they list ingredients they have; NutriMe Kitchen then balances portions to their targets. Prefer these names when they fit: ${NM.FOOD_NAMES}
 - {"type":"remind","kind":"checkin"|"move","time":"HH:MM"} to set a daily reminder, or "time":"off"
 - {"type":"open","page":"kitchen"|"move"|"mind"|"health"|"insights"} to point them to the right page
-For "what can I cook": use the Kitchen ingredients and suggest one simple meal, plus open kitchen.
+${opts.voice ? "They spoke this out loud, so it may be a long ramble with filler words. Capture every task, reminder, plan and list in it as separate actions (a time-bound thing is an add_todo with time). Your reply then sums up what you set, in one sentence.\n" : ""}For "what can I cook": use the Kitchen ingredients and suggest one simple meal, plus open kitchen.
 Their data:
 ${context()}
 ${history ? `Conversation so far:\n${history}\n` : ""}Them: ${q.slice(0, 1500)}
 Reply with only JSON: {"reply": string, "actions": [ ... ]}`;
   try {
     const r = await NM.sample.json(prompt);
-    const acts = runActions(Array.isArray(r?.actions) ? r.actions.slice(0, 6) : []);
-    say("ai", String(r?.reply || "Done.").slice(0, 600), acts);
+    const acts = runActions(Array.isArray(r?.actions) ? r.actions.slice(0, 25) : []);
+    const reply = String(r?.reply || "Done.").slice(0, 600);
+    say("ai", reply, acts);
+    if (opts.voice && store.get("speakReplies", true) !== false) speak(reply);
   } catch (e) { say("ai", NM.errCopy(e)); }
   finally { thinking.remove(); busy = false; $("#asForm button[type=submit]").disabled = false; }
 }
@@ -158,6 +162,7 @@ function runActions(list) {
   for (const a of list) {
     if (!a || typeof a !== "object") continue;
     if (a.type === "add_todo") { const t = addTodo(a.text, a.day, a.time); if (t) out.push({ label: `✓ To-do: ${t.text}${t.day ? ` (${niceDue(t)})` : ""}` }); }
+    else if (a.type === "checklist" && Array.isArray(a.items)) { const title = String(a.title || "List").slice(0, 40); let n = 0; for (const it of a.items.slice(0, 20)) if (addTodo(it, "", "", title)) n++; if (n) out.push({ label: `✓ ${title}: ${n} item${n > 1 ? "s" : ""}` }); }
     else if (a.type === "done_todo") { const all = todos(), t = all.find(x => x.id === a.id); if (t) { t.done = true; saveTodos(all); renderTodos(); out.push({ label: `✓ Done: ${t.text}` }); } }
     else if (a.type === "kitchen" && Array.isArray(a.items) && a.items.length) { const rows = NM.mergeItems(a.items.slice(0, 20)); if (rows.length) out.push({ label: `Balanced ${rows.length} ingredient${rows.length > 1 ? "s" : ""} in Kitchen`, href: "#kitchen" }); }
     else if (a.type === "remind" && (a.kind === "checkin" || a.kind === "move")) {
@@ -227,6 +232,61 @@ async function scheduleNative() {
   } catch (e) { console.warn("Reminders could not be scheduled", e); }
 }
 
+
+// ---------- voice ----------
+// Tap the mic, talk as long as you like, tap again to send. Replies are read out loud.
+const SR = window.Capacitor?.isNativePlatform?.() ? window.Capacitor?.Plugins?.SpeechRecognition : null;
+const TTS = window.Capacitor?.isNativePlatform?.() ? window.Capacitor?.Plugins?.TextToSpeech : null;
+const WebSR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const LANG = navigator.language || "en-GB";
+let rec = null, listening = false, said = "", partial = "";
+const showHeard = () => { $("#asIn").value = (said + " " + partial).trim(); $("#asIn").scrollLeft = 1e9; };
+function setMic(on) {
+  listening = on; $("#asMic").classList.toggle("rec", on); $("#asMic").setAttribute("aria-pressed", String(on));
+  $("#asMic").setAttribute("aria-label", on ? "Stop and send" : "Speak");
+  $("#asIn").placeholder = on ? "Listening… tap the mic again when you're done" : "Ask, or add a to-do";
+}
+async function startListening() {
+  stopSpeaking(); said = $("#asIn").value.trim(); partial = "";
+  if (SR) {
+    try {
+      const { available } = await SR.available(); if (!available) throw 0;
+      const perm = await SR.requestPermissions(); if (perm.speechRecognition !== "granted") { say("ai", "NutriMe needs microphone access to listen. You can allow it in your phone's settings."); return; }
+      await SR.removeAllListeners();
+      SR.addListener("partialResults", d => { partial = (d.matches || [])[0] || ""; showHeard(); });
+      // Android stops after a pause, so keep restarting until you tap stop.
+      SR.addListener("listeningState", d => { if (d.status === "stopped") { if (partial) { said = (said + " " + partial).trim(); partial = ""; } if (listening) setTimeout(() => listening && SR.start({ language: LANG, partialResults: true, popup: false }).catch(() => {}), 150); } });
+      setMic(true);
+      await SR.start({ language: LANG, partialResults: true, popup: false });
+    } catch { setMic(false); say("ai", "Voice input isn't available on this phone. You can type instead."); }
+    return;
+  }
+  if (!WebSR) { say("ai", "This browser can't listen. Try Chrome, or the Android app, or type instead."); return; }
+  rec = new WebSR(); rec.lang = LANG; rec.continuous = true; rec.interimResults = true;
+  rec.onresult = e => { partial = ""; for (let i = e.resultIndex; i < e.results.length; i++) { const t = e.results[i][0].transcript; if (e.results[i].isFinal) said = (said + " " + t).trim(); else partial += t; } showHeard(); };
+  rec.onerror = e => { if (e.error === "not-allowed" || e.error === "service-not-allowed") { setMic(false); say("ai", "NutriMe needs microphone access to listen. Allow it in your browser's site settings."); } };
+  rec.onend = () => { if (listening) { try { rec.start(); } catch {} } };
+  setMic(true);
+  try { rec.start(); } catch { setMic(false); }
+}
+async function stopListening(send = true) {
+  setMic(false);
+  if (SR) { try { await SR.stop(); } catch {} try { await SR.removeAllListeners(); } catch {} }
+  if (rec) { try { rec.stop(); } catch {} rec = null; }
+  const q = (said + " " + partial).replace(/\s+/g, " ").trim(); said = partial = "";
+  $("#asIn").value = "";
+  if (send && q) ask(q, { voice: true });
+}
+function speak(text) {
+  if (!text || store.get("speakReplies", true) === false && !listening) return;
+  if (TTS) { TTS.speak({ text, lang: LANG, rate: 1.0 }).catch(() => {}); return; }
+  if ("speechSynthesis" in window) { try { speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = LANG; speechSynthesis.speak(u); } catch {} }
+}
+function stopSpeaking() { try { TTS ? TTS.stop() : window.speechSynthesis?.cancel(); } catch {} }
+function renderSpeak() { const on = store.get("speakReplies", true) !== false; $("#asSpeak").setAttribute("aria-pressed", String(on)); $("#asSpeak").textContent = on ? "🔊 Read answers aloud" : "🔈 Answers silent"; }
+$("#asMic").addEventListener("click", () => listening ? stopListening(true) : startListening());
+$("#asSpeak").addEventListener("click", () => { const on = store.get("speakReplies", true) !== false; store.set("speakReplies", !on); if (on) stopSpeaking(); renderSpeak(); });
+
 // ---------- events ----------
 $("#asForm").addEventListener("submit", e => { e.preventDefault(); const q = $("#asIn").value; $("#asIn").value = ""; ask(q); });
 $("#asQuick").addEventListener("click", e => { const b = e.target.closest("button[data-q]"); if (b) ask(b.dataset.q); });
@@ -242,5 +302,5 @@ $("#remAllow").addEventListener("click", askPermission);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
 setInterval(tick, 30000);
 
-NM.renderAsk = renderAsk; NM.rescheduleReminders = scheduleNative; NM.askNotifyPermission = askPermission;
+NM.renderAsk = renderAsk; NM.notify = notify; NM.addTodo = addTodo; NM.rescheduleReminders = scheduleNative; NM.askNotifyPermission = askPermission;
 renderAsk(); tick(); scheduleNative();

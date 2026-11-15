@@ -39,6 +39,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Take photos of ingredients from inside the app -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- Health Connect: NutriMe only reads these (the plugin also declares write permissions it never uses) -->
