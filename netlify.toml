@@ -1,3 +1,32 @@
 [build]
   publish = "web"
   functions = "netlify/functions"
+
+# The landing page used to be at /welcome/. The app now lives at /app/.
+[[redirects]]
+  from = "/welcome/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/welcome"
+  to = "/"
+  status = 301
+
+# Make sure the app's files are always checked for updates.
+[[headers]]
+  for = "/app/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+[[headers]]
+  for = "/app/*.js"
+  [headers.values]
+    Cache-Control = "no-cache"
+[[headers]]
+  for = "/app/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"

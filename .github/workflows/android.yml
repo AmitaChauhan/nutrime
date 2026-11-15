@@ -23,7 +23,7 @@ jobs:
         run: npm ci
       - name: Use the site address saved in repository variables (optional)
         if: ${{ vars.NUTRIME_SITE != '' }}
-        run: echo "window.NUTRIME_SITE = \"${{ vars.NUTRIME_SITE }}\";" > web/config.js
+        run: echo "window.NUTRIME_SITE = \"${{ vars.NUTRIME_SITE }}\";" > web/app/config.js
       - name: Copy the web app into Android
         run: npx cap sync android
       - name: Build the app

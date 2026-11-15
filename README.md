@@ -13,7 +13,8 @@ numbers) go to the AI through your own website.
 
 | Folder | What it is |
 |---|---|
-| `web/` | The app itself (the website and the inside of the Android app) |
+| `web/index.html` | The landing page at https://nutrime.nl/ |
+| `web/app/` | The app itself at https://nutrime.nl/app/ (also the inside of the Android app) |
 | `netlify/functions/ai.mjs` | Your private AI connection at `/api/ai`. Holds the OpenRouter key on Netlify |
 | `android/` | The Android app (Capacitor), built automatically by GitHub |
 | `.github/workflows/android.yml` | Builds the Android app file on every push |
@@ -25,7 +26,10 @@ On a computer with Node.js installed, in this folder:
     npx netlify-cli login
     npx netlify-cli deploy --prod
 
-Pick your existing NutriMe site. In Netlify, under Site configuration > Environment variables, keep
+Pick your existing NutriMe site. Check you're on the new version: https://nutrime.nl/ shows the landing page,
+and https://nutrime.nl/app/ shows Kitchen, Move and Health on the bottom bar, with "NutriMe version 1.4" at the
+bottom of the Kitchen page. If you installed the app before, opening the old home-screen icon takes you to
+/app/ automatically. For the best result, remove the old icon and add the app again from https://nutrime.nl/app/. In Netlify, under Site configuration > Environment variables, keep
 (or add) `OPENROUTER_API_KEY`, `APP_PASSCODE` and optionally `OPENROUTER_MODEL`
 (default `anthropic/claude-haiku-4.5`). Check it works at `https://YOUR-SITE/api/ai`
 (it should say `"server":true,"ready":true`).
@@ -33,8 +37,8 @@ Pick your existing NutriMe site. In Netlify, under Site configuration > Environm
 ## 2. Android app (GitHub builds it)
 
 1. Push this folder to your GitHub repo (`main` branch).
-2. Optional: in the repo, Settings > Secrets and variables > Actions > Variables, add
-   `NUTRIME_SITE` = `https://YOUR-SITE.netlify.app` so the app knows your site without typing it.
+2. The app already points at https://nutrime.nl. To use a different address, add a repository variable
+   `NUTRIME_SITE` (Settings > Secrets and variables > Actions > Variables).
 3. Open the repo's Actions tab > "Build Android app" > the latest run > download `NutriMe-android`.
 4. Unzip it on your Android phone and open `app-debug.apk`. Allow "install unknown apps" when asked.
 5. In NutriMe Health, tap "Sync from Health Connect" and allow access.
