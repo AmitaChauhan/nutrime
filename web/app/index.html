@@ -89,7 +89,7 @@ dialog.gate input { width: 100%; font-size: 16px; }
 dialog.gate .acts { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 
 /* Tabs */
-.bottomnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
+.bottomnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(5, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding: 6px max(8px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); }
 .bottomnav a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; color: var(--muted); text-decoration: none; font-size: 12px; font-weight: 600; border-radius: 10px; }
 .bottomnav a svg { width: 24px; height: 24px; }
 .bottomnav a[aria-current="page"] { color: var(--accent); }
@@ -173,6 +173,30 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .mentry .was { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
 .mentry .del { position: absolute; right: 0; bottom: 6px; padding: 2px 4px; font-size: 12px; }
 .mentry .pill::before { display: none; }
+.chat { display: flex; flex-direction: column; gap: 8px; max-height: 50vh; overflow-y: auto; }
+.chat:empty { display: none; }
+.bub { max-width: 85%; padding: 8px 12px; border-radius: 14px; font-size: 15px; line-height: 1.4; white-space: pre-wrap; }
+.bub.me { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 4px; }
+.bub.ai { align-self: flex-start; background: var(--sunk); border-bottom-left-radius: 4px; }
+.bub .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.bub .acts a, .bub .acts span { font-size: 12px; font-weight: 600; color: var(--accent); text-decoration: none; }
+.askbar { display: flex; gap: 8px; align-items: center; }
+.askbar input { flex: 1; min-width: 0; }
+.askbar .icon { padding: 8px 10px; display: inline-flex; }
+.askbar .icon svg { width: 20px; height: 20px; }
+.today { display: flex; flex-wrap: wrap; gap: 6px; }
+.today a, .today span { font-size: 13px; padding: 5px 10px; border-radius: 999px; background: var(--sunk); color: var(--ink); text-decoration: none; }
+.today .due { background: var(--warn-bg); color: var(--warn); }
+.today .ok { color: var(--accent); }
+ul.todos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+ul.todos li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+ul.todos li span { flex: 1; min-width: 0; }
+ul.todos li.done span { color: var(--muted); text-decoration: line-through; }
+ul.todos small { color: var(--muted); display: block; }
+ul.todos input[type=checkbox], .rem input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--accent); }
+ul.todos button { padding: 4px 8px; font-size: 13px; }
+.rem { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.rem input[type=time] { width: auto; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; opacity: 0; }
 .thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
 .thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
@@ -275,6 +299,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
     <a href="#move" data-page="move"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v6M5 10l7 2 7-2M8 21l4-8 4 8"/></svg>Move</a>
     <a href="#mind" data-page="mind"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.4 5.9.9-4.3 4.1 1 5.9L12 16.5 6.8 19.3l1-5.9L3.5 9.3l5.9-.9z"/></svg>Mind</a>
     <a href="#health" data-page="health"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 1 0-7.1 7.1L12 21.5l8.8-8.8a5 5 0 0 0 0-7.1z"/><path d="M3.5 12h4l2-3 3 6 2-3h6"/></svg>Health</a>
+    <a href="#assistant" data-page="assistant"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20.5l1.4-4.9A8 8 0 1 1 21 12z"/><path d="M8.5 11h.01M12 11h.01M15.5 11h.01"/></svg>Assistant</a>
   </nav>
 
   <div id="view-cook">
@@ -410,7 +435,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       </section>
     </div>
   </div>
-  <p class="source" style="margin-top:20px">NutriMe version 1.5 (Kitchen, Move, Mind and Health). Nutrition values are per 100 g from USDA FoodData Central (SR Legacy and Foundation Foods), rounded. Items marked "estimate" were filled in by Claude and are less exact. Amounts read from photos are guesses, so check them before relying on the numbers.</p>
+  <p class="source" style="margin-top:20px">NutriMe version 1.6 (Kitchen, Move, Mind, Health and Assistant). Nutrition values are per 100 g from USDA FoodData Central (SR Legacy and Foundation Foods), rounded. Items marked "estimate" were filled in by Claude and are less exact. Amounts read from photos are guesses, so check them before relying on the numbers.</p>
   </div>
 
   <div id="view-log" hidden>
@@ -481,6 +506,44 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
       </div>
     </div>
     <p class="source" style="margin-top:16px">Move gently and stop if anything hurts. If you have an injury, a heart or blood pressure condition, or are pregnant, check with a doctor first.</p>
+  </div>
+
+  <div id="view-ask" hidden>
+    <section class="panel" aria-label="Assistant">
+      <div class="today" id="asToday"></div>
+      <div class="chat" id="asChat" aria-live="polite"></div>
+      <div class="chips" id="asQuick">
+        <button type="button" class="chip" data-q="What can I cook?">What can I cook?</button>
+        <button type="button" class="chip" data-q="How am I doing?">How am I doing?</button>
+        <button type="button" class="chip" data-q="Plan my day">Plan my day</button>
+      </div>
+      <form class="askbar" id="asForm">
+        <button type="button" class="icon" id="asCam" aria-label="Photo of your fridge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button>
+        <input id="asIn" type="text" placeholder="Ask, or add a to-do" aria-label="Message" autocomplete="off" enterkeyhint="send">
+        <button type="submit" class="primary">Send</button>
+      </form>
+      <input type="file" id="asPhoto" class="vh" accept="image/*" capture="environment" tabindex="-1">
+      <p class="source" style="margin:0">When you send, your message and a short summary of your recent log go to the AI. To-dos, reminders and chat history stay on this phone.</p>
+    </section>
+    <div class="grid">
+      <section class="panel" aria-labelledby="h-todo">
+        <div class="panel-head"><h2 id="h-todo">To-dos</h2><button type="button" class="ghost" id="asClearDone" hidden>Clear done</button></div>
+        <form class="row2" id="asTodoForm">
+          <input id="asTodo" type="text" placeholder="Add a to-do" aria-label="New to-do" style="flex:1 1 180px">
+          <input id="asTodoDay" type="date" aria-label="Day (optional)" style="width:auto">
+          <input id="asTodoTime" type="time" aria-label="Time (optional)" style="width:auto">
+          <button type="submit">Add</button>
+        </form>
+        <ul class="todos" id="asTodos"></ul>
+      </section>
+      <section class="panel" aria-labelledby="h-rem">
+        <h2 id="h-rem">Reminders</h2>
+        <label class="rem"><input type="checkbox" id="remCi"> Check in at <input type="time" id="remCiT" value="20:30" aria-label="Check-in reminder time"></label>
+        <label class="rem"><input type="checkbox" id="remMv"> Move at <input type="time" id="remMvT" value="18:00" aria-label="Move reminder time"></label>
+        <div><button type="button" id="remAllow" hidden>Allow notifications</button></div>
+        <p class="source" id="remNote" style="margin:0"></p>
+      </section>
+    </div>
   </div>
 
   <div id="view-mind" hidden>
@@ -942,6 +1005,27 @@ function errCopy(e) {
 }
 function setStatus(el, text, busy, warn) { el.hidden = !text; el.className = "status" + (warn ? " warn" : ""); el.innerHTML = (busy ? '<span class="spin"></span>' : "") + `<span>${esc(text || "")}</span>`; }
 
+function mergeItems(out) {
+  const rows = [];
+  for (const it of out) {
+    if (!it || !it.name) continue;
+    const name = String(it.name).slice(0, 80);
+    let f = findFood(name);
+    if (!f && it.per100) {
+      const n = it.per100, num = v => Math.max(0, Number(v) || 0);
+      f = { name, al: [], k: num(n.kcal), p: num(n.protein), c: num(n.carbs), f: num(n.fat), fi: num(n.fiber), est: true };
+      f.cat = guessCat(f.p, f.c, f.f);
+      S.custom = S.custom.filter(c => norm(c.name) !== norm(name)); S.custom.unshift(f);
+    }
+    const unit = ["g", "ml", "pc", "cup", "tbsp"].includes(it.unit) ? it.unit : "g";
+    rows.push({ id: uid++, name: f ? f.name : name, qty: Math.max(0, Number(it.qty) || 0), unit, est: it.confidence });
+  }
+  if (S.example) { S.rows = []; S.example = false; }
+  // merge: replace same-name rows, append the rest
+  for (const r of rows) { const i = S.rows.findIndex(x => norm(x.name) === norm(r.name)); if (i >= 0) S.rows[i] = r; else S.rows.push(r); }
+  save(); fillDatalist(); renderRows();
+  return rows;
+}
 async function readPhotos(files) {
   const st = $("#snapStatus");
   files = [...files].filter(f => f.type.startsWith("image/") || (!f.type && /\.(jpe?g|png|webp|gif|heic|heif)$/i.test(f.name || ""))).slice(0, 4);
@@ -960,25 +1044,9 @@ Reply with only a JSON array, for example:
   try {
     const out = await sample.json(prompt, { images: files });
     if (!Array.isArray(out) || !out.length) { setStatus(st, "No ingredients spotted. Try a closer, brighter photo, or type them below.", false, true); return; }
-    const rows = [];
-    for (const it of out) {
-      if (!it || !it.name) continue;
-      const name = String(it.name).slice(0, 80);
-      let f = findFood(name);
-      if (!f && it.per100) {
-        const n = it.per100, num = v => Math.max(0, Number(v) || 0);
-        f = { name, al: [], k: num(n.kcal), p: num(n.protein), c: num(n.carbs), f: num(n.fat), fi: num(n.fiber), est: true };
-        f.cat = guessCat(f.p, f.c, f.f);
-        S.custom = S.custom.filter(c => norm(c.name) !== norm(name)); S.custom.unshift(f);
-      }
-      const unit = ["g", "ml", "pc", "cup", "tbsp"].includes(it.unit) ? it.unit : "g";
-      rows.push({ id: uid++, name: f ? f.name : name, qty: Math.max(0, Number(it.qty) || 0), unit, est: it.confidence });
-    }
-    if (S.example) { S.rows = []; S.example = false; }
-    // merge: replace same-name rows, append the rest
-    for (const r of rows) { const i = S.rows.findIndex(x => norm(x.name) === norm(r.name)); if (i >= 0) S.rows[i] = r; else S.rows.push(r); }
-    save(); fillDatalist(); renderRows();
+    const rows = mergeItems(out);
     const low = rows.filter(r => r.est === "low").length;
+    if (!rows.length) { setStatus(st, "No ingredients spotted. Try a closer, brighter photo, or type them below.", false, true); return 0; }
     setStatus(st, `Found ${rows.length} ingredient${rows.length > 1 ? "s" : ""}. Check the amounts below${low ? ` (${low} ${low > 1 ? "were" : "was"} hard to judge)` : ""} and fix anything that's off.`, false);
   } catch (e) {
     setStatus(st, errCopy(e), false, true);
@@ -1263,8 +1331,8 @@ $("#passcode").addEventListener("focus", e => { if (e.target.value === "••�
 initClaude();
 detectServer();
 
-window.NM = { store, fmt, esc, S, setStatus, errCopy, get current() { return current; }, get sample() { return sample; } };
-import("./move.js").then(() => import("./mind.js")).then(() => import("./journal.js")).catch(e => console.error("NutriMe page failed to load", e));
+window.NM = { store, fmt, esc, S, setStatus, errCopy, readPhotos, mergeItems, FOOD_NAMES, get current() { return current; }, get sample() { return sample; } };
+import("./move.js").then(() => import("./mind.js")).then(() => import("./journal.js")).then(() => import("./assistant.js")).catch(e => console.error("NutriMe page failed to load", e));
 
 if (isNative) {
   const sc = document.createElement("script"); sc.type = "module"; sc.src = "native-health.js"; document.head.appendChild(sc);

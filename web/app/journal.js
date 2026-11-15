@@ -352,19 +352,21 @@ const ROUTES = {
   mind: { view: "mind", page: "mind", name: "Mind", tag: "Small daily practices for a kinder, steadier view of yourself." },
   move: { view: "move", page: "move", name: "Move", tag: "Breathe, stretch and move. Every session shows up in your Health insights." },
   health: { view: "log", page: "health", name: "Health", tag: "Log what you ate and how you feel, and see which foods suit you." },
+  assistant: { view: "ask", page: "assistant", name: "Assistant", tag: "Short answers, meals from your fridge, reminders and to-dos." },
   insights: { view: "insights", page: "health", name: "Health", tag: "Log what you ate and how you feel, and see which foods suit you." },
 };
-const ALIASES = { cook: "kitchen", log: "health" };
+const ALIASES = { cook: "kitchen", log: "health", ask: "assistant" };
 function route() {
   let h = location.hash.slice(1); h = ALIASES[h] || h;
   const r = ROUTES[h] || ROUTES.kitchen;
-  ["cook", "move", "mind", "log", "insights"].forEach(k => { $("#view-" + k).hidden = k !== r.view; });
+  ["cook", "move", "mind", "log", "insights", "ask"].forEach(k => { $("#view-" + k).hidden = k !== r.view; });
   document.querySelectorAll(".bottomnav a").forEach(a => a.setAttribute("aria-current", a.dataset.page === r.page ? "page" : "false"));
   $("#pageName").textContent = r.name; $("#pageTag").textContent = r.tag;
   document.title = "NutriMe " + r.name;
   if (r.view === "log") renderLog();
   if (r.view === "move") NM.renderMove?.();
   if (r.view === "mind") NM.renderMind?.();
+  if (r.view === "ask") NM.renderAsk?.();
   if (r.view === "insights") renderInsights();
   window.scrollTo(0, 0);
 }
