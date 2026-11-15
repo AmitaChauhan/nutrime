@@ -129,7 +129,12 @@
   window.addEventListener("online", () => session() && sync().catch(() => {}));
 
   window.NMAccount = {
-    configure(a) { cfg = a && a.url && a.anon ? { url: String(a.url).replace(/\/+$/, ""), anon: a.anon } : null; if (cfg) raw.set("__auth", cfg); else raw.del("__auth"); },
+    configure(a) {
+      const url = String(a?.url || "").trim(), anon = String(a?.anon || "").trim();
+      // Only accept a clean https address and a key without spaces, so a bad setting never sends you somewhere odd.
+      cfg = /^https:\/\/[^\s/]+(\/[^\s]*)?$/.test(url) && anon && !/\s/.test(anon) ? { url: url.replace(/\/+$/, ""), anon } : (/^http:\/\/localhost[:/]/.test(url) ? { url: url.replace(/\/+$/, ""), anon } : null);
+      if (cfg) raw.set("__auth", cfg); else raw.del("__auth");
+    },
     get enabled() { return !!cfg; }, oauthUrl, finishOAuth, parseFrag,
     takePendingOAuth() { try { const v = sessionStorage.getItem("nutrime.oauth"); sessionStorage.removeItem("nutrime.oauth"); return v ? JSON.parse(v) : null; } catch { return null; } },
     session, token, signIn, signUp, recover, signOut, sync, markDirty,

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <script>
   // Someone who installed the app from the old address opens it here: send them straight to the app.
-  try { if (window.matchMedia("(display-mode: standalone)").matches || navigator.standalone) location.replace("/app/" + location.hash); } catch (e) {}
+  try { if (/access_token=|error_description=/.test(location.hash) || window.matchMedia("(display-mode: standalone)").matches || navigator.standalone) location.replace("/app/" + location.hash); } catch (e) {}
 </script>
 <title>NutriMe</title>
 <meta name="description" content="Snap your ingredients and see the nutrition, balanced portions and a recipe. Add short yoga, breathing and workouts, then learn which foods and habits suit you.">

@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NutriMe</title>
+<script>
+  // Sign-in sometimes lands on a page that doesn't exist (for example when Supabase's Site URL
+  // isn't the app). If the address carries a sign-in result, hand it to the app.
+  (function () {
+    var h = location.hash || "", q = location.search || "";
+    if (/access_token=|error_description=/.test(h) || /[?&](code|error_description)=/.test(q)) { location.replace("/app/" + q + h); return; }
+    if (/^\/app\//.test(location.pathname)) { location.replace("/app/" + h); }
+  })();
+</script>
+<style>body{font:16px system-ui,sans-serif;background:#F1F4EF;color:#17221B;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}main{max-width:420px}a{color:#2F6B45;font-weight:600}@media (prefers-color-scheme:dark){body{background:#101612;color:#E5ECE6}a{color:#7CC294}}</style>
+</head><body><main><h1>Page not found</h1><p>This page doesn't exist. <a href="/app/">Open NutriMe</a> or go to the <a href="/">home page</a>.</p></main></body></html>

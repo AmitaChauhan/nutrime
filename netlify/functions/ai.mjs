@@ -19,14 +19,28 @@ let corsOrigin = "";
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store", ...(corsOrigin ? { "access-control-allow-origin": corsOrigin, "vary": "Origin" } : {}) } });
 const sameText = (a, b) => timingSafeEqual(createHash("sha256").update(String(a)).digest(), createHash("sha256").update(String(b)).digest());
 
+// Accept the Supabase settings however they were pasted: with or without https://, with a trailing
+// /rest/v1, just the project id, or a whole "NEXT_PUBLIC_SUPABASE_URL=... KEY=..." snippet.
+const SB_URL_RE = /https?:\/\/[a-z0-9-]+\.supabase\.(co|in)\b/i;
+const SB_KEY_RE = /\b(sb_publishable_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)/;
+export const normSbUrl = u => {
+  u = String(u || "").trim(); if (!u) return "";
+  const m = u.match(SB_URL_RE); if (m) return m[0].replace(/^http:/i, "https:");
+  u = u.replace(/^[A-Z_]+=/, "").split(/\s+/)[0];
+  if (/^[a-z0-9]{15,30}$/i.test(u)) return `https://${u}.supabase.co`;
+  if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+  try { const x = new URL(u); if (!x.hostname.includes(".") && x.hostname !== "localhost") return ""; return (x.origin + x.pathname).replace(/\/+$/, "").replace(/\/(rest|auth)\/v1$/i, "").replace(/\/+$/, ""); } catch { return ""; }
+};
+export const normSbKey = (k, fallbackText) => { k = String(k || "").trim(); const m = k.match(SB_KEY_RE) || String(fallbackText || "").match(SB_KEY_RE); return m ? m[1] : /^[^\s=]+$/.test(k) ? k : ""; };
+export const sbConfig = () => { const url = normSbUrl(process.env.SUPABASE_URL), anon = normSbKey(process.env.SUPABASE_ANON_KEY, process.env.SUPABASE_URL); return url && anon ? { url, anon } : null; };
 // Accounts: check a Supabase sign-in token. Results are cached for a few minutes.
 const tokenCache = new Map();
 async function userFromToken(token) {
-  const url = process.env.SUPABASE_URL, anon = process.env.SUPABASE_ANON_KEY;
+  const c = sbConfig(); const url = c?.url, anon = c?.anon;
   if (!url || !anon || typeof token !== "string" || token.length < 20) return null;
   const hit = tokenCache.get(token); if (hit && hit.until > Date.now()) return hit.user;
   try {
-    const r = await fetch(url.replace(/\/+$/, "") + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
+    const r = await fetch(url + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
     const user = r.ok ? await r.json() : null;
     if (tokenCache.size > 200) tokenCache.clear();
     tokenCache.set(token, { user, until: Date.now() + 5 * 60000 });
@@ -43,9 +57,9 @@ export default async (req) => {
   const origin = req.headers.get("origin") || "";
   corsOrigin = APP_ORIGINS.has(origin) ? origin : "";
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsOrigin ? { "access-control-allow-origin": corsOrigin, "access-control-allow-methods": "GET, POST", "access-control-allow-headers": "content-type", "access-control-max-age": "86400", "vary": "Origin" } : {} });
-  const sbUrl = process.env.SUPABASE_URL, sbAnon = process.env.SUPABASE_ANON_KEY;
-  const auth = sbUrl && sbAnon ? { url: sbUrl.replace(/\/+$/, ""), anon: sbAnon } : null;
-  if (req.method === "GET") return json(200, { server: true, ready: Boolean(key && (pass || auth)), model, auth });
+  const auth = sbConfig();
+  const authProblem = !auth && (process.env.SUPABASE_URL || process.env.SUPABASE_ANON_KEY) ? "Supabase settings in Netlify look wrong: SUPABASE_URL should be like https://xxxx.supabase.co and SUPABASE_ANON_KEY the publishable or anon key." : undefined;
+  if (req.method === "GET") return json(200, { server: true, ready: Boolean(key && (pass || auth)), model, auth, authProblem });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
   if (!key || !(pass || auth)) return json(500, { error: "not_configured" });
 

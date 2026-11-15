@@ -1319,7 +1319,8 @@ async function detectServer() {
     const r = await fetch(apiUrl(), { headers: { accept: "application/json" }, cache: "no-store" });
     const d = r.ok ? await r.json() : null;
     serverInfo = d && d.server ? d : null;
-    if (serverInfo) window.NMAccount.configure(serverInfo.auth || null);
+    if (serverInfo) { window.NMAccount.configure(serverInfo.auth || null); if (serverInfo.auth && !window.NMAccount.enabled) serverInfo.authProblem = "Supabase settings look wrong. Check SUPABASE_URL in Netlify."; if (!window.NMAccount.enabled) serverInfo.auth = null; }
+    if (serverInfo?.authProblem) console.warn(serverInfo.authProblem);
   } catch { serverInfo = window.NMAccount.enabled && window.NMAccount.session() ? { server: true, ready: true, auth: true, offline: true } : null; }
   initClaude();
   return !!serverInfo;
@@ -1428,7 +1429,7 @@ function renderLoginMode() {
 }
 function showLogin(show) {
   $("#login").hidden = !show; document.body.style.overflow = show || !$("#onb").hidden ? "hidden" : "";
-  if (show) { renderLoginMode(); $("#loginSiteWrap").hidden = !isNative; $("#loginSite").value = siteBase(); setTimeout(() => (acctMode() ? $("#loginEmail") : $("#loginPass")).focus(), 50); }
+  if (show) { renderLoginMode(); if (serverInfo?.authProblem) setStatus($("#loginMsg"), serverInfo.authProblem + " Until then you can sign in with the passcode.", false, true); $("#loginSiteWrap").hidden = !isNative; $("#loginSite").value = siteBase(); setTimeout(() => (acctMode() ? $("#loginEmail") : $("#loginPass")).focus(), 50); }
   else window.dispatchEvent(new Event("nutrime-signed-in"));
 }
 NM_login.needed = () => !$("#login").hidden;
@@ -1481,6 +1482,8 @@ $("#loginForm").addEventListener("submit", async e => {
 const NATIVE_REDIRECT = "app.nutrime.personal://login";
 $("#loginGoogle").addEventListener("click", async () => {
   if (!navigator.onLine) { setStatus($("#loginMsg"), "You're offline. Connect to the internet to sign in.", false, true); return; }
+  const url = window.NMAccount.oauthUrl("google", "x");
+  if (!url || !/^https?:\/\//.test(url)) { setStatus($("#loginMsg"), "Google sign-in isn't set up correctly: check SUPABASE_URL in Netlify (it should look like https://xxxx.supabase.co).", false, true); return; }
   if (isNative) {
     const Browser = window.Capacitor?.Plugins?.Browser;
     if (!Browser) { setStatus($("#loginMsg"), "Google sign-in needs the latest NutriMe app.", false, true); return; }
