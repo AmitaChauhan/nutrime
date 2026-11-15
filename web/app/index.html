@@ -197,6 +197,23 @@ ul.todos input[type=checkbox], .rem input[type=checkbox] { width: 20px; height: 
 ul.todos button { padding: 4px 8px; font-size: 13px; }
 .rem { display: flex; align-items: center; gap: 10px; font-size: 14px; }
 .rem input[type=time] { width: auto; }
+.onb { position: fixed; inset: 0; z-index: 50; background: var(--bg); overflow-y: auto; padding: max(20px, env(safe-area-inset-top, 0px)) 16px calc(24px + env(safe-area-inset-bottom, 0px)); }
+.onb-in { max-width: 520px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; gap: 18px; }
+.onb-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.onb-dots { display: flex; gap: 6px; }
+.onb-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.onb-dots i.on { background: var(--accent); width: 22px; border-radius: 4px; }
+.onb h2 { font-size: clamp(24px, 6vw, 30px); }
+.onb .lead { color: var(--muted); margin: 0; }
+.onb .body { display: flex; flex-direction: column; gap: 14px; flex: 1; }
+.onb .foot { display: flex; gap: 10px; justify-content: space-between; align-items: center; }
+.onb .foot .primary { flex: 1; max-width: 260px; margin-left: auto; padding: 12px 18px; font-size: 16px; }
+.onb .big { font-size: 18px; padding: 12px 14px; }
+.onb .chips .chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent-ink); background: var(--accent); }
+.onb .opt { display: flex; gap: 8px; flex-wrap: wrap; }
+.onb .opt button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.onb .kcal { display: flex; align-items: center; gap: 10px; }
+.onb .kcal input { width: 120px; font-size: 20px; font-weight: 700; text-align: center; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; opacity: 0; }
 .thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
 .thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
@@ -294,6 +311,25 @@ ul.todos button { padding: 4px 8px; font-size: 13px; }
     <h1>Nutri<span>Me</span> <em id="pageName">Kitchen</em></h1>
     <p class="tag" id="pageTag">Snap what you have. See the nutrition, get portions that fit your targets, and a recipe to cook them.</p>
   </header>
+  <div class="onb" id="login" hidden role="dialog" aria-modal="true" aria-labelledby="loginH" style="z-index:60">
+    <form class="onb-in" id="loginForm" style="justify-content:center">
+      <h1 style="font-size:34px">Nutri<span>Me</span></h1>
+      <h2 id="loginH">Sign in</h2>
+      <p class="lead">Enter your NutriMe passcode. You only need to do this once on this phone.</p>
+      <input id="loginPass" class="big" type="password" autocomplete="current-password" placeholder="Passcode" aria-label="Passcode" required>
+      <div id="loginSiteWrap" hidden><label class="eyebrow" for="loginSite">Your NutriMe address</label><input id="loginSite" type="url" inputmode="url" placeholder="https://nutrime.nl"></div>
+      <div class="status" id="loginMsg" hidden></div>
+      <button type="submit" class="primary big" id="loginBtn">Sign in</button>
+      <p class="source" style="margin:0">Your meals, check-ins and health data stay on this phone. The passcode only unlocks photo reading and the assistant. <button type="button" class="ghost" id="loginSkip" style="padding:2px 4px">Continue without signing in</button></p>
+    </form>
+  </div>
+  <div class="onb" id="onb" hidden role="dialog" aria-modal="true" aria-labelledby="onbH">
+    <div class="onb-in">
+      <div class="onb-top"><h1 style="font-size:22px">Nutri<span>Me</span></h1><div class="onb-dots" id="onbDots" aria-hidden="true"></div></div>
+      <div class="body" id="onbBody"></div>
+      <div class="foot"><button type="button" class="ghost" id="onbBack">Back</button><button type="button" class="primary" id="onbNext">Next</button></div>
+    </div>
+  </div>
   <nav class="bottomnav" aria-label="NutriMe">
     <a href="#kitchen" data-page="kitchen" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3v8a3 3 0 0 0 3 3v7M9 3v5M12 3v8a3 3 0 0 1-3 3"/><path d="M18 21V3c-2.2 1.2-3 3.7-3 7v4h3"/></svg>Kitchen</a>
     <a href="#move" data-page="move"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v6M5 10l7 2 7-2M8 21l4-8 4 8"/></svg>Move</a>
@@ -435,7 +471,7 @@ ul.todos button { padding: 4px 8px; font-size: 13px; }
       </section>
     </div>
   </div>
-  <p class="source" style="margin-top:20px">NutriMe version 1.6 (Kitchen, Move, Mind, Health and Assistant). Nutrition values are per 100 g from USDA FoodData Central (SR Legacy and Foundation Foods), rounded. Items marked "estimate" were filled in by Claude and are less exact. Amounts read from photos are guesses, so check them before relying on the numbers.</p>
+  <p class="source" style="margin-top:20px">NutriMe version 1.7 (Kitchen, Move, Mind, Health and Assistant). <a href="#setup">Change your setup</a> · <a href="#signout" id="signOut">Sign out</a>. Nutrition values are per 100 g from USDA FoodData Central (SR Legacy and Foundation Foods), rounded. Items marked "estimate" were filled in by Claude and are less exact. Amounts read from photos are guesses, so check them before relying on the numbers.</p>
   </div>
 
   <div id="view-log" hidden>
@@ -1089,6 +1125,11 @@ document.querySelectorAll("#presets button").forEach(b => b.addEventListener("cl
 $("#servings").addEventListener("change", e => { S.servings = Number(e.target.value); save(); recompute(); });
 $("#notes").value = store.get("notes", "");
 $("#notes").addEventListener("input", e => store.set("notes", e.target.value));
+// Used by onboarding to fill in targets and cooking preferences.
+function applySetup({ t, notes } = {}) {
+  if (t) { Object.assign(S.t, t); save(); renderTargets(); recompute(); }
+  if (notes != null) { $("#notes").value = notes; store.set("notes", notes); }
+}
 $("#addRow").addEventListener("click", () => { touched(); const r = { id: uid++, name: "", qty: 100, unit: "g" }; S.rows.push(r); const el = rowEl(r); $("#rows").appendChild(el); el.querySelector("input").focus(); });
 $("#clearAll").addEventListener("click", () => { S.rows = []; S.example = false; save(); renderRows(); });
 $("#askRecipe").addEventListener("click", writeRecipe);
@@ -1329,10 +1370,37 @@ $("#savePass").addEventListener("click", () => {
 $("#forgetPass").addEventListener("click", () => { store.set("passcode", ""); initClaude(); });
 $("#passcode").addEventListener("focus", e => { if (e.target.value === "••••••") e.target.value = ""; });
 initClaude();
-detectServer();
 
-window.NM = { store, fmt, esc, S, setStatus, errCopy, readPhotos, mergeItems, FOOD_NAMES, get current() { return current; }, get sample() { return sample; } };
-import("./move.js").then(() => import("./mind.js")).then(() => import("./journal.js")).then(() => import("./assistant.js")).catch(e => console.error("NutriMe page failed to load", e));
+// ---------- sign in ----------
+const NM_login = {};
+// Shown when the site has the NutriMe server and this phone has no passcode yet.
+function needsLogin() { return !!serverInfo && !store.get("passcode", "") && !sessionStorage.getItem("nutrime.skipLogin"); }
+function showLogin(show) {
+  $("#login").hidden = !show; document.body.style.overflow = show || !$("#onb").hidden ? "hidden" : "";
+  if (show) { $("#loginSiteWrap").hidden = !isNative; $("#loginSite").value = siteBase(); setTimeout(() => $("#loginPass").focus(), 50); }
+  else window.dispatchEvent(new Event("nutrime-signed-in"));
+}
+NM_login.needed = () => !$("#login").hidden;
+$("#loginForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const pass = $("#loginPass").value, btn = $("#loginBtn");
+  if (isNative && $("#loginSite").value.trim()) store.set("site", $("#loginSite").value.trim().replace(/\/+$/, ""));
+  btn.disabled = true; setStatus($("#loginMsg"), "Checking…", true);
+  try {
+    const r = await fetch(apiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ passcode: pass, check: true }) });
+    if (r.status === 401) { setStatus($("#loginMsg"), "That passcode doesn't match. Try again.", false, true); return; }
+    if (!r.ok) throw 0;
+    store.set("passcode", pass); $("#loginPass").value = ""; setStatus($("#loginMsg"), "", false);
+    await detectServer(); showLogin(false);
+  } catch { setStatus($("#loginMsg"), navigator.onLine ? "Couldn't reach NutriMe. Check the address, or try again in a moment." : "You're offline. Connect to the internet to sign in.", false, true); }
+  finally { btn.disabled = false; }
+});
+$("#loginSkip").addEventListener("click", () => { try { sessionStorage.setItem("nutrime.skipLogin", "1"); } catch {} showLogin(false); });
+$("#signOut").addEventListener("click", e => { e.preventDefault(); store.set("passcode", ""); try { sessionStorage.removeItem("nutrime.skipLogin"); } catch {} initClaude(); history.replaceState(null, "", location.pathname + "#kitchen"); if (serverInfo) showLogin(true); });
+detectServer().then(() => showLogin(needsLogin()));
+
+window.NM = { login: NM_login, store, fmt, esc, S, setStatus, errCopy, readPhotos, mergeItems, FOOD_NAMES, applySetup, isNative, get current() { return current; }, get sample() { return sample; } };
+import("./move.js").then(() => import("./mind.js")).then(() => import("./journal.js")).then(() => import("./assistant.js")).then(() => import("./onboarding.js")).catch(e => console.error("NutriMe page failed to load", e));
 
 if (isNative) {
   const sc = document.createElement("script"); sc.type = "module"; sc.src = "native-health.js"; document.head.appendChild(sc);

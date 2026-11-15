@@ -94,7 +94,8 @@ function context() {
   } catch {}
   const k = NM.S || {}, rows = (k.rows || []).filter(r => r.name && Number(r.qty) > 0);
   const open = todos().filter(x => !x.done).slice(0, 15);
-  return `Now: ${new Date().toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} (date ${t}).
+  const prof = store.get("profile", {});
+  return `${prof.name ? `Name: ${prof.name}. ` : ""}${prof.goals?.length ? `Goals: ${prof.goals.join(", ")}. ` : ""}${prof.rules?.length || prof.extra ? `Food rules: ${[...(prof.rules || []), prof.extra].filter(Boolean).join(", ")}.\n` : "\n"}Now: ${new Date().toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} (date ${t}).
 Targets: ${k.t ? `${k.t.kcal} kcal/day, ${k.t.meals} meals` : "not set"}. Today: ${checkedIn() ? "checked in" : "not checked in"}, moved ${movedToday()} min.
 Last 7 days (scores 1-5, higher is better):
 ${days.join("\n") || "nothing logged"}
@@ -241,5 +242,5 @@ $("#remAllow").addEventListener("click", askPermission);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
 setInterval(tick, 30000);
 
-NM.renderAsk = renderAsk;
+NM.renderAsk = renderAsk; NM.rescheduleReminders = scheduleNative; NM.askNotifyPermission = askPermission;
 renderAsk(); tick(); scheduleNative();

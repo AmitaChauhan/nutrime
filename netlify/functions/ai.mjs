@@ -34,6 +34,7 @@ export default async (req) => {
     await new Promise(r => setTimeout(r, 800)); // slow down guessing
     return json(401, { error: "passcode" });
   }
+  if (body.check === true) return json(200, { ok: true }); // sign-in screen checks the passcode
   const prompt = typeof body.prompt === "string" ? body.prompt.slice(0, MAX_PROMPT) : "";
   const images = Array.isArray(body.images) ? body.images.slice(0, MAX_IMAGES) : [];
   if (!prompt) return json(400, { error: "bad_request" });

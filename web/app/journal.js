@@ -19,6 +19,9 @@ const HEALTH = [
   { k: "weight", label: "Weight", unit: " kg", d: 1 },
 ];
 
+// Feelings chosen in onboarding (all of them unless you picked some).
+export const tracked = () => { const on = store.get("tracked", null); const t = Array.isArray(on) && on.length ? METRICS.filter(m => on.includes(m.k)) : METRICS; return t.length ? t : METRICS; };
+
 // ---------- data ----------
 const db = {
   meals: () => store.get("meals", []),
@@ -63,7 +66,7 @@ function loadDraft(day) { const c = db.checkins()[day]; ciDraft = c ? JSON.parse
 function renderCheckin() {
   const day = $("#ciDay").value || dayKey(new Date());
   if (!ciDraft) loadDraft(day);
-  $("#ciScales").innerHTML = METRICS.map(m => `<fieldset class="scale"><legend>${esc(m.label)}</legend>
+  $("#ciScales").innerHTML = tracked().map(m => `<fieldset class="scale"><legend>${esc(m.label)}</legend>
     <div class="dots" role="radiogroup" aria-label="${esc(m.label)}">${[1, 2, 3, 4, 5].map(v => `<button type="button" role="radio" aria-checked="${ciDraft[m.k] === v}" data-k="${m.k}" data-v="${v}" aria-label="${v} of 5">${v}</button>`).join("")}</div>
     <div class="ends"><span>${esc(m.lo)}</span><span>${esc(m.hi)}</span></div></fieldset>`).join("");
   $("#ciSymptoms").innerHTML = SYMPTOMS.map(s => `<button type="button" class="chip" aria-pressed="${ciDraft.symptoms.includes(s)}" data-s="${esc(s)}">${esc(s)}</button>`).join("");
@@ -77,7 +80,7 @@ $("#ciNote").addEventListener("input", e => { ciDraft.note = e.target.value; });
 $("#ciDay").addEventListener("change", () => { loadDraft($("#ciDay").value); renderCheckin(); });
 $("#ciSave").addEventListener("click", () => {
   const day = $("#ciDay").value || dayKey(new Date());
-  if (!METRICS.some(m => ciDraft[m.k])) { NM.setStatus($("#ciMsg"), "Tap at least one score first.", false, true); return; }
+  if (!tracked().some(m => ciDraft[m.k])) { NM.setStatus($("#ciMsg"), "Tap at least one score first.", false, true); return; }
   const all = db.checkins(); all[day] = { ...ciDraft, at: new Date().toISOString() }; db.saveCheckins(all);
   NM.setStatus($("#ciMsg"), `Check-in saved for ${niceDay(day).toLowerCase()}.`, false);
   renderCheckin(); renderDiary();
@@ -226,7 +229,7 @@ export function analyse() {
   // last 7 days vs the 7 before
   const today = dayKey(new Date());
   const win = (from, to, k) => { const v = []; for (let i = from; i < to; i++) { const c = cis[addDays(today, -i)]; if (c && c[k]) v.push(c[k]); } return v; };
-  const weeks = METRICS.map(m => ({ m, now: win(0, 7, m.k), before: win(7, 14, m.k) }));
+  const weeks = tracked().map(m => ({ m, now: win(0, 7, m.k), before: win(7, 14, m.k) }));
   return { ciDays, foodFx, sympFx, links, actFx, weeks, food, cis, hl };
 }
 
@@ -237,7 +240,7 @@ function chart(cis, food) {
   const x = i => L + i * (W - L - R) / 29, y = v => T + (5 - v) * (H - T - B) / 4;
   const kmax = Math.max(2500, ...days.map(d => (food[d] ? food[d].k : 0)));
   const bars = days.map((d, i) => { const k = food[d] ? food[d].k : 0; if (!k) return ""; const h = k / kmax * 30; return `<rect x="${x(i) - 5}" y="${H - 14 - h}" width="10" height="${h}" rx="2" fill="var(--line)"><title>${niceDay(d)}: ${fmt(k)} kcal</title></rect>`; }).join("");
-  const lines = METRICS.map(m => {
+  const lines = tracked().map(m => {
     const pts = days.map((d, i) => cis[d] && cis[d][m.k] ? [x(i), y(cis[d][m.k])] : null);
     let path = "", pen = false;
     pts.forEach(p => { if (!p) { pen = false; return; } path += (pen ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1); pen = true; });
@@ -247,7 +250,7 @@ function chart(cis, food) {
   const grid = [1, 2, 3, 4, 5].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L - 8}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--muted)">${v}</text>`).join("");
   const ticks = [0, 7, 14, 21, 29].map(i => `<text x="${x(i)}" y="${H - 2}" text-anchor="middle" font-size="11" fill="var(--muted)">${niceDay(days[i])}</text>`).join("");
   return `<div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" width="100%" style="min-width:420px" role="img" aria-label="How you felt over the last 30 days, scores 1 to 5, with daily calories as grey bars">${grid}${bars}${lines}${ticks}</svg></div>
-    <div class="legend">${METRICS.map(m => `<span style="--c:${m.color}">${esc(m.short || m.label)}</span>`).join("")}<span style="--c:var(--line)">Calories eaten</span></div>`;
+    <div class="legend">${tracked().map(m => `<span style="--c:${m.color}">${esc(m.short || m.label)}</span>`).join("")}<span style="--c:var(--line)">Calories eaten</span></div>`;
 }
 
 let lastAnalysis = null;
@@ -346,6 +349,7 @@ $("#exBtn").addEventListener("click", () => {
 });
 
 // ---------- views ----------
+NM.syncHealth = syncHealth;
 export function renderLog() { renderCheckin(); renderDiary(); $("#hBox").hidden = !window.NutriHealthSync; }
 const ROUTES = {
   kitchen: { view: "cook", page: "kitchen", name: "Kitchen", tag: "Snap what you have. See the nutrition, get portions that fit your targets, and a recipe to cook them." },
