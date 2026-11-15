@@ -4,7 +4,7 @@
 //   APP_PASSCODE        a passcode you type into the app once (required)
 //   OPENROUTER_MODEL    optional, an OpenRouter model id that accepts images
 //   SUPABASE_URL        optional, turns on accounts + cloud sync (Supabase project URL)
-//   SUPABASE_ANON_KEY   optional, the project's public "anon" key (safe to share; data is protected per user)
+//   SUPABASE_ANON_KEY   optional, the project's publishable key (sb_publishable_...) or legacy "anon" key; both are public by design
 //   ALLOWED_EMAILS      optional, comma-separated emails allowed to use the AI (recommended with accounts)
 import { timingSafeEqual, createHash } from "node:crypto";
 

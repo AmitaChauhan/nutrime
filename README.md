@@ -67,10 +67,10 @@ data stays on each device.
 2. In the project, open **SQL Editor**, paste everything from `supabase/schema.sql`, press **Run**.
    This creates one table with row-level security, so each account can only read its own rows.
 3. **Authentication > URL Configuration**: set Site URL to `https://nutrime.nl`.
-4. **Project Settings > API**: copy the Project URL and the `anon` `public` key.
+4. **Project Settings > API Keys**: copy the Project URL and either the **publishable** key (`sb_publishable_…`, preferred) or the legacy `anon` `public` key. Both work.
 5. In Netlify (Site configuration > Environment variables) add:
    - `SUPABASE_URL` = the Project URL
-   - `SUPABASE_ANON_KEY` = the anon public key (it's meant to be public; your data is protected by row-level security)
+   - `SUPABASE_ANON_KEY` = the publishable key or legacy anon key (both are meant to be public; your data is protected by row-level security). Never use the secret / service-role key.
    - `ALLOWED_EMAILS` = your email (only these accounts can use the AI, which spends your OpenRouter credits)
 6. Redeploy: `npx netlify-cli deploy --prod`.
 7. Open the app, tap **Create an account**, confirm the email, sign in. Do this first on the device
