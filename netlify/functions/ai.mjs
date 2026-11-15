@@ -3,6 +3,9 @@
 //   OPENROUTER_API_KEY  your OpenRouter key (required)
 //   APP_PASSCODE        a passcode you type into the app once (required)
 //   OPENROUTER_MODEL    optional, an OpenRouter model id that accepts images
+//   SUPABASE_URL        optional, turns on accounts + cloud sync (Supabase project URL)
+//   SUPABASE_ANON_KEY   optional, the project's public "anon" key (safe to share; data is protected per user)
+//   ALLOWED_EMAILS      optional, comma-separated emails allowed to use the AI (recommended with accounts)
 import { timingSafeEqual, createHash } from "node:crypto";
 
 const DEFAULT_MODEL = "anthropic/claude-haiku-4.5";
@@ -16,6 +19,22 @@ let corsOrigin = "";
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "cache-control": "no-store", ...(corsOrigin ? { "access-control-allow-origin": corsOrigin, "vary": "Origin" } : {}) } });
 const sameText = (a, b) => timingSafeEqual(createHash("sha256").update(String(a)).digest(), createHash("sha256").update(String(b)).digest());
 
+// Accounts: check a Supabase sign-in token. Results are cached for a few minutes.
+const tokenCache = new Map();
+async function userFromToken(token) {
+  const url = process.env.SUPABASE_URL, anon = process.env.SUPABASE_ANON_KEY;
+  if (!url || !anon || typeof token !== "string" || token.length < 20) return null;
+  const hit = tokenCache.get(token); if (hit && hit.until > Date.now()) return hit.user;
+  try {
+    const r = await fetch(url.replace(/\/+$/, "") + "/auth/v1/user", { headers: { apikey: anon, authorization: "Bearer " + token } });
+    const user = r.ok ? await r.json() : null;
+    if (tokenCache.size > 200) tokenCache.clear();
+    tokenCache.set(token, { user, until: Date.now() + 5 * 60000 });
+    return user;
+  } catch { return null; }
+}
+const emailAllowed = email => { const list = (process.env.ALLOWED_EMAILS || "").split(",").map(x => x.trim().toLowerCase()).filter(Boolean); return !list.length || list.includes(String(email || "").toLowerCase()); };
+
 export default async (req) => {
   const key = process.env.OPENROUTER_API_KEY;
   const pass = process.env.APP_PASSCODE;
@@ -24,13 +43,18 @@ export default async (req) => {
   const origin = req.headers.get("origin") || "";
   corsOrigin = APP_ORIGINS.has(origin) ? origin : "";
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsOrigin ? { "access-control-allow-origin": corsOrigin, "access-control-allow-methods": "GET, POST", "access-control-allow-headers": "content-type", "access-control-max-age": "86400", "vary": "Origin" } : {} });
-  if (req.method === "GET") return json(200, { server: true, ready: Boolean(key && pass), model });
+  const sbUrl = process.env.SUPABASE_URL, sbAnon = process.env.SUPABASE_ANON_KEY;
+  const auth = sbUrl && sbAnon ? { url: sbUrl.replace(/\/+$/, ""), anon: sbAnon } : null;
+  if (req.method === "GET") return json(200, { server: true, ready: Boolean(key && (pass || auth)), model, auth });
   if (req.method !== "POST") return json(405, { error: "method_not_allowed" });
-  if (!key || !pass) return json(500, { error: "not_configured" });
+  if (!key || !(pass || auth)) return json(500, { error: "not_configured" });
 
   let body;
   try { body = await req.json(); } catch { return json(400, { error: "bad_request" }); }
-  if (!body || typeof body.passcode !== "string" || !sameText(body.passcode, pass)) {
+  let ok = false;
+  if (body && body.token && auth) { const u = await userFromToken(body.token); if (u && u.id) { if (!emailAllowed(u.email)) return json(403, { error: "not_allowed" }); ok = true; } }
+  if (!ok && body && pass && typeof body.passcode === "string" && sameText(body.passcode, pass)) ok = true;
+  if (!ok) {
     await new Promise(r => setTimeout(r, 800)); // slow down guessing
     return json(401, { error: "passcode" });
   }

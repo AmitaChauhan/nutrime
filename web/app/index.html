@@ -320,12 +320,14 @@ ul.todos button { padding: 4px 8px; font-size: 13px; }
     <form class="onb-in" id="loginForm" style="justify-content:center">
       <h1 style="font-size:34px">Nutri<span>Me</span></h1>
       <h2 id="loginH">Sign in</h2>
-      <p class="lead">Enter your NutriMe passcode. You only need to do this once on this phone.</p>
+      <p class="lead" id="loginLead">Enter your NutriMe passcode. You only need to do this once on this phone.</p>
+      <input id="loginEmail" class="big" type="email" autocomplete="email" inputmode="email" placeholder="Email" aria-label="Email" hidden>
       <input id="loginPass" class="big" type="password" autocomplete="current-password" placeholder="Passcode" aria-label="Passcode" required>
+      <div id="loginLinks" hidden style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><button type="button" class="ghost" id="loginMode" style="padding:2px 4px">New here? Create an account</button><button type="button" class="ghost" id="loginForgot" style="padding:2px 4px">Forgot password?</button></div>
       <div id="loginSiteWrap" hidden><label class="eyebrow" for="loginSite">Your NutriMe address</label><input id="loginSite" type="url" inputmode="url" placeholder="https://nutrime.nl"></div>
       <div class="status" id="loginMsg" hidden></div>
       <button type="submit" class="primary big" id="loginBtn">Sign in</button>
-      <p class="source" style="margin:0">Your meals, check-ins and health data stay on this phone. The passcode only unlocks photo reading and the assistant. <button type="button" class="ghost" id="loginSkip" style="padding:2px 4px">Continue without signing in</button></p>
+      <p class="source" style="margin:0" id="loginNote"><span id="loginNoteText">Your meals, check-ins and health data stay on this phone. The passcode only unlocks photo reading and the assistant.</span> <button type="button" class="ghost" id="loginSkip" style="padding:2px 4px">Continue without signing in</button></p>
     </form>
   </div>
   <div class="onb" id="onb" hidden role="dialog" aria-modal="true" aria-labelledby="onbH">
@@ -476,7 +478,7 @@ ul.todos button { padding: 4px 8px; font-size: 13px; }
       </section>
     </div>
   </div>
-  <p class="source" style="margin-top:20px">NutriMe version 1.8 (Kitchen, Move, Mind, Health and voice Assistant). <a href="#setup">Change your setup</a> · <a href="#signout" id="signOut">Sign out</a>. Nutrition values are per 100 g from USDA FoodData Central (SR Legacy and Foundation Foods), rounded. Items marked "estimate" were filled in by Claude and are less exact. Amounts read from photos are guesses, so check them before relying on the numbers.</p>
+  <p class="source" style="margin-top:20px">NutriMe version 1.9 (accounts and sync; Kitchen, Move, Mind, Health and voice Assistant). <a href="#setup">Change your setup</a> · <a href="#signout" id="signOut">Sign out</a>.<span id="acctLine"></span> Nutrition values are per 100 g from USDA FoodData Central (SR Legacy and Foundation Foods), rounded. Items marked "estimate" were filled in by Claude and are less exact. Amounts read from photos are guesses, so check them before relying on the numbers.</p>
   </div>
 
   <div id="view-log" hidden>
@@ -660,6 +662,7 @@ ul.todos button { padding: 4px 8px; font-size: 13px; }
 
 <div class="updatebar" id="updateBar" hidden role="status"><span>A new version of NutriMe is ready.</span><button type="button" class="primary" id="updateBtn">Reload</button></div>
 <script src="config.js"></script>
+<script src="sync.js"></script>
 <script type="module">
 import { Anthropic } from "./anthropic-sdk.js";
 // ---------- Food data: per 100 g [kcal, protein, carbs, fat, fiber] ----------
@@ -760,7 +763,7 @@ const FOODS = RAW.map(([name, al, k, p, c, f, fi, cat, o]) => ({ name, al: al.sp
 // ---------- storage (per-viewer convenience only) ----------
 const store = {
   get(k, d) { try { const v = localStorage.getItem("nutrime." + k); return v ? JSON.parse(v) : d; } catch { return d; } },
-  set(k, v) { try { localStorage.setItem("nutrime." + k, JSON.stringify(v)); } catch {} }
+  set(k, v) { try { localStorage.setItem("nutrime." + k, JSON.stringify(v)); } catch {} window.NMAccount?.markDirty(k); }
 };
 let uid = 1;
 const EXAMPLE = [
@@ -1033,7 +1036,8 @@ const FOOD_NAMES = FOODS.map(f => f.name).join("; ");
 function errCopy(e) {
   const c = e && e.code;
   if (c === "auth") return "Your API key was rejected. Check it in Photo reading setup.";
-  if (c === "passcode") return "That passcode didn't match. Check it under Photo reading setup.";
+  if (c === "passcode") return window.NMAccount?.enabled ? "Please sign in again (bottom of Kitchen: Sign out, then sign in)." : "That passcode didn't match. Check it under Photo reading setup.";
+  if (c === "not_allowed") return "This account isn't allowed to use the AI. Add its email to ALLOWED_EMAILS in Netlify.";
   if (c === "not_configured") return "The server is missing its settings. Add OPENROUTER_API_KEY and APP_PASSCODE in Netlify, then redeploy.";
   if (c === "server_key") return "OpenRouter rejected the key saved on Netlify. Check OPENROUTER_API_KEY there.";
   if (c === "timeout") return "Claude took too long to answer. Try again, or use a smaller photo.";
@@ -1281,7 +1285,8 @@ let serverInfo = null;
 const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 function siteBase() { return isNative ? (store.get("site", "") || window.NUTRIME_SITE || "").replace(/\/+$/, "") : ""; }
 function apiUrl() { return siteBase() + "/api/ai"; }
-function makeServer(passcode) {
+function makeServer(passcode) { // passcode, or null to use your account
+
   return {
     async json(prompt, opts = {}) {
       if (!navigator.onLine) throw { code: "offline" };
@@ -1289,7 +1294,8 @@ function makeServer(passcode) {
       for (const f of [...(opts.images || [])]) images.push(await shrink(f));
       let res;
       try {
-        res = await fetch(apiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ passcode, prompt, images }) });
+        const cred = passcode ? { passcode } : { token: await window.NMAccount.token() };
+        res = await fetch(apiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...cred, prompt, images }) });
       } catch { throw { code: navigator.onLine ? "upstream_error" : "offline" }; }
       const data = await res.json().catch(() => null);
       if (!res.ok) {
@@ -1309,7 +1315,8 @@ async function detectServer() {
     const r = await fetch(apiUrl(), { headers: { accept: "application/json" }, cache: "no-store" });
     const d = r.ok ? await r.json() : null;
     serverInfo = d && d.server ? d : null;
-  } catch { serverInfo = null; }
+    if (serverInfo) window.NMAccount.configure(serverInfo.auth || null);
+  } catch { serverInfo = window.NMAccount.enabled && window.NMAccount.session() ? { server: true, ready: true, auth: true, offline: true } : null; }
   initClaude();
   return !!serverInfo;
 }
@@ -1343,6 +1350,17 @@ $("#orModel").addEventListener("change", e => store.set("ormodel", e.target.valu
 function initClaude() {
   $("#serverBox").hidden = !serverInfo;
   $("#keyBox").hidden = !!serverInfo;
+  if (serverInfo && serverInfo.auth) {
+    const acct = window.NMAccount.session();
+    sample = acct ? makeServer(null) : null;
+    $("#askRecipe").hidden = !sample;
+    $("#serverBox").hidden = true;
+    $("#snap").querySelector("small").textContent = sample
+      ? "Lay everything out on the counter. Packets with visible labels help with amounts. You can add up to 4 photos."
+      : "Sign in to read photos. Until then, type your ingredients in the list.";
+    renderAcct();
+    return;
+  }
   if (serverInfo) {
     const pass = store.get("passcode", "");
     sample = pass ? makeServer(pass) : null;
@@ -1384,31 +1402,95 @@ initClaude();
 
 // ---------- sign in ----------
 const NM_login = {};
-// Shown when the site has the NutriMe server and this phone has no passcode yet.
-function needsLogin() { return !!serverInfo && !store.get("passcode", "") && !sessionStorage.getItem("nutrime.skipLogin"); }
+// Accounts (when the server has Supabase settings) or the shared passcode.
+const acctMode = () => !!(serverInfo && serverInfo.auth);
+let signUpMode = false;
+function needsLogin() {
+  if (sessionStorage.getItem("nutrime.skipLogin")) return false;
+  if (acctMode()) return !window.NMAccount.session();
+  return !!serverInfo && !store.get("passcode", "");
+}
+function renderLoginMode() {
+  const a = acctMode();
+  $("#loginEmail").hidden = !a; $("#loginEmail").required = a; $("#loginLinks").hidden = !a;
+  $("#loginH").textContent = a && signUpMode ? "Create your account" : "Sign in";
+  $("#loginLead").textContent = a ? (signUpMode ? "Use your email and a password of at least 8 characters. Your data then follows you to every phone and browser." : "Sign in with your email and password. Your meals, check-ins and settings sync to your account.") : "Enter your NutriMe passcode. You only need to do this once on this phone.";
+  $("#loginPass").placeholder = a ? "Password" : "Passcode"; $("#loginPass").setAttribute("aria-label", a ? "Password" : "Passcode");
+  $("#loginPass").autocomplete = a && signUpMode ? "new-password" : "current-password";
+  $("#loginBtn").textContent = a && signUpMode ? "Create account" : "Sign in";
+  $("#loginMode").textContent = signUpMode ? "Have an account? Sign in" : "New here? Create an account";
+  $("#loginForgot").hidden = signUpMode;
+  $("#loginNoteText").textContent = a ? "Your data is stored in your private account. Only you can read it." : "Your meals, check-ins and health data stay on this phone. The passcode only unlocks photo reading and the assistant.";
+}
 function showLogin(show) {
   $("#login").hidden = !show; document.body.style.overflow = show || !$("#onb").hidden ? "hidden" : "";
-  if (show) { $("#loginSiteWrap").hidden = !isNative; $("#loginSite").value = siteBase(); setTimeout(() => $("#loginPass").focus(), 50); }
+  if (show) { renderLoginMode(); $("#loginSiteWrap").hidden = !isNative; $("#loginSite").value = siteBase(); setTimeout(() => (acctMode() ? $("#loginEmail") : $("#loginPass")).focus(), 50); }
   else window.dispatchEvent(new Event("nutrime-signed-in"));
 }
 NM_login.needed = () => !$("#login").hidden;
+function renderAcct() {
+  const s = window.NMAccount?.session(), el = $("#acctLine"); if (!el) return;
+  if (!acctMode() || !s) { el.textContent = ""; return; }
+  const t = window.NMAccount.lastSynced(), mins = t ? Math.round((Date.now() - t) / 60000) : null;
+  el.textContent = ` Signed in as ${s.user.email}. ${window.NMAccount.pending() ? "Saving…" : mins == null ? "" : mins < 1 ? "Synced just now." : `Synced ${mins} min ago.`}`;
+}
+const authCopy = e => {
+  const m = String(e?.msg || e?.code || "").toLowerCase();
+  if (m.includes("invalid login") || e?.code === "invalid_credentials") return "That email and password don't match. Try again, or tap Forgot password.";
+  if (m.includes("not confirmed") || e?.code === "email_not_confirmed") return "Confirm your email first: open the link we sent you, then sign in.";
+  if (m.includes("already registered") || e?.code === "user_already_exists") return "There's already an account with this email. Sign in instead.";
+  if (m.includes("password") && (m.includes("6") || m.includes("8") || m.includes("weak") || m.includes("short"))) return "Choose a longer password (at least 8 characters).";
+  if (m.includes("signup") && m.includes("disabled")) return "New accounts are switched off for this NutriMe.";
+  if (e?.status === 429) return "Too many tries. Wait a minute and try again.";
+  return navigator.onLine ? "Couldn't reach your account. Try again in a moment." : "You're offline. Connect to the internet to sign in.";
+};
+async function afterSignIn() {
+  setStatus($("#loginMsg"), "Bringing in your data…", true);
+  try { await window.NMAccount.sync(); } catch {}
+  location.reload();
+}
 $("#loginForm").addEventListener("submit", async e => {
   e.preventDefault();
   const pass = $("#loginPass").value, btn = $("#loginBtn");
   if (isNative && $("#loginSite").value.trim()) store.set("site", $("#loginSite").value.trim().replace(/\/+$/, ""));
   btn.disabled = true; setStatus($("#loginMsg"), "Checking…", true);
   try {
+    if (acctMode()) {
+      const email = $("#loginEmail").value.trim();
+      if (signUpMode) {
+        if (pass.length < 8) { setStatus($("#loginMsg"), "Choose a password of at least 8 characters.", false, true); return; }
+        const s = await window.NMAccount.signUp(email, pass);
+        if (!s) { signUpMode = false; renderLoginMode(); setStatus($("#loginMsg"), "Almost done: open the confirmation email we just sent, then sign in here.", false); return; }
+      } else await window.NMAccount.signIn(email, pass);
+      $("#loginPass").value = ""; await afterSignIn(); return;
+    }
     const r = await fetch(apiUrl(), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ passcode: pass, check: true }) });
     if (r.status === 401) { setStatus($("#loginMsg"), "That passcode doesn't match. Try again.", false, true); return; }
     if (!r.ok) throw 0;
     store.set("passcode", pass); $("#loginPass").value = ""; setStatus($("#loginMsg"), "", false);
     await detectServer(); showLogin(false);
-  } catch { setStatus($("#loginMsg"), navigator.onLine ? "Couldn't reach NutriMe. Check the address, or try again in a moment." : "You're offline. Connect to the internet to sign in.", false, true); }
+  } catch (err) { setStatus($("#loginMsg"), acctMode() ? authCopy(err) : navigator.onLine ? "Couldn't reach NutriMe. Check the address, or try again in a moment." : "You're offline. Connect to the internet to sign in.", false, true); }
   finally { btn.disabled = false; }
 });
+$("#loginMode").addEventListener("click", () => { signUpMode = !signUpMode; setStatus($("#loginMsg"), "", false); renderLoginMode(); });
+$("#loginForgot").addEventListener("click", async () => {
+  const email = $("#loginEmail").value.trim(); if (!email) { setStatus($("#loginMsg"), "Type your email first, then tap Forgot password.", false, true); $("#loginEmail").focus(); return; }
+  try { await window.NMAccount.recover(email); setStatus($("#loginMsg"), "If that email has an account, a reset link is on its way.", false); } catch (err) { setStatus($("#loginMsg"), authCopy(err), false, true); }
+});
 $("#loginSkip").addEventListener("click", () => { try { sessionStorage.setItem("nutrime.skipLogin", "1"); } catch {} showLogin(false); });
-$("#signOut").addEventListener("click", e => { e.preventDefault(); store.set("passcode", ""); try { sessionStorage.removeItem("nutrime.skipLogin"); } catch {} initClaude(); history.replaceState(null, "", location.pathname + "#kitchen"); if (serverInfo) showLogin(true); });
-detectServer().then(() => showLogin(needsLogin()));
+$("#signOut").addEventListener("click", async e => {
+  e.preventDefault(); try { sessionStorage.removeItem("nutrime.skipLogin"); } catch {}
+  if (acctMode()) { await window.NMAccount.signOut(); location.replace(location.pathname + "#kitchen"); location.reload(); return; }
+  store.set("passcode", ""); initClaude(); history.replaceState(null, "", location.pathname + "#kitchen"); if (serverInfo) showLogin(true);
+});
+window.addEventListener("nutrime-synced", e => {
+  renderAcct();
+  // New data arrived from another device: reload once so every page shows it.
+  if (e.detail?.changed) { try { if (sessionStorage.getItem("nutrime.syncReload") !== String(window.NMAccount.lastSynced())) { sessionStorage.setItem("nutrime.syncReload", String(window.NMAccount.lastSynced())); location.reload(); } } catch {} }
+});
+window.addEventListener("nutrime-signed-out", () => { initClaude(); if (acctMode()) showLogin(true); });
+setInterval(renderAcct, 30000);
+detectServer().then(() => { showLogin(needsLogin()); if (acctMode() && window.NMAccount.session()) window.NMAccount.sync().catch(() => {}); });
 
 window.NM = { login: NM_login, store, fmt, esc, S, setStatus, errCopy, readPhotos, mergeItems, FOOD_NAMES, applySetup, isNative, get current() { return current; }, get sample() { return sample; } };
 import("./move.js").then(() => import("./mind.js")).then(() => import("./journal.js")).then(() => import("./assistant.js")).then(() => import("./onboarding.js")).then(() => import("./smart.js")).catch(e => console.error("NutriMe page failed to load", e));

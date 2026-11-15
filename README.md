@@ -55,3 +55,26 @@ The same code builds for iPhone with `npx cap add ios` and the HealthKit setup i
 - Website: run `npx netlify-cli deploy --prod` again.
 - Android: push to `main`, then install the new app file from Actions over the old one. Your data stays.
 - Netlify's free plan stops functions after about 10 seconds, so keep a fast model.
+
+## Accounts and cloud sync (Supabase)
+
+With these settings NutriMe asks people to sign in with email and password, and their
+meals, check-ins, health data, Move, Mind, to-dos and settings sync between the website
+and the Android app. Without them, the app keeps working with the shared passcode and
+data stays on each device.
+
+1. Create a free project at https://supabase.com (region: Frankfurt or another EU region).
+2. In the project, open **SQL Editor**, paste everything from `supabase/schema.sql`, press **Run**.
+   This creates one table with row-level security, so each account can only read its own rows.
+3. **Authentication > URL Configuration**: set Site URL to `https://nutrime.nl`.
+4. **Project Settings > API**: copy the Project URL and the `anon` `public` key.
+5. In Netlify (Site configuration > Environment variables) add:
+   - `SUPABASE_URL` = the Project URL
+   - `SUPABASE_ANON_KEY` = the anon public key (it's meant to be public; your data is protected by row-level security)
+   - `ALLOWED_EMAILS` = your email (only these accounts can use the AI, which spends your OpenRouter credits)
+6. Redeploy: `npx netlify-cli deploy --prod`.
+7. Open the app, tap **Create an account**, confirm the email, sign in. Do this first on the device
+   that has the most data; every other device's data is merged in when it signs in.
+8. Optional: after creating your account, turn off **Authentication > Sign In / Providers > Allow new users to sign up**.
+
+The service-role key is never needed. Never put it in the app or in Netlify.
