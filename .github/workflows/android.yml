@@ -19,6 +19,9 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: android-actions/setup-android@v3
+        with:
+          # the old default package "tools" no longer exists; Gradle fetches the rest
+          packages: platform-tools
       - name: Install
         run: npm ci
       - name: Use the site address saved in repository variables (optional)
