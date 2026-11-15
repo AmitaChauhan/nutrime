@@ -1,0 +1,6 @@
+{
+  "appId": "app.nutrime.personal",
+  "appName": "NutriMe",
+  "webDir": "web",
+  "android": { "allowMixedContent": false }
+}

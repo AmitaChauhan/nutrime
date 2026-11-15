@@ -1,0 +1,36 @@
+name: Build Android app
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: android-actions/setup-android@v3
+      - name: Install
+        run: npm ci
+      - name: Use the site address saved in repository variables (optional)
+        if: ${{ vars.NUTRIME_SITE != '' }}
+        run: echo "window.NUTRIME_SITE = \"${{ vars.NUTRIME_SITE }}\";" > web/config.js
+      - name: Copy the web app into Android
+        run: npx cap sync android
+      - name: Build the app
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+      - name: Upload the installable app
+        uses: actions/upload-artifact@v4
+        with:
+          name: NutriMe-android
+          path: android/app/build/outputs/apk/debug/app-debug.apk
