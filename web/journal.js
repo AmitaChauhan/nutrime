@@ -102,8 +102,8 @@ $("#hSync").addEventListener("click", syncHealth);
 
 // ---------- diary ----------
 function renderDiary() {
-  const meals = db.meals(), cis = db.checkins(), hl = db.health();
-  const days = new Set([...meals.map(m => m.day), ...Object.keys(cis), ...Object.keys(hl)]);
+  const meals = db.meals(), cis = db.checkins(), hl = db.health(), acts = store.get("activities", []);
+  const days = new Set([...meals.map(m => m.day), ...Object.keys(cis), ...Object.keys(hl), ...acts.map(a => a.day)]);
   const list = [...days].sort().reverse().slice(0, 21);
   if (!list.length) { $("#diary").innerHTML = `<p class="empty">Nothing logged yet. Tap "I ate this" under a recipe, and do a check-in each evening.</p>`; return; }
   $("#diary").innerHTML = list.map(d => {
@@ -113,6 +113,7 @@ function renderDiary() {
     return `<article class="day"><div class="day-h"><b>${esc(niceDay(d))}</b><span class="eyebrow">${dm.length ? fmt(kcal) + " kcal" : ""}</span></div>
       ${dm.map(m => `<div class="meal"><span class="t">${new Date(m.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><span class="n">${esc(m.title)}<small>${esc(m.items.map(i => i.name.split(/[,(/]/)[0].trim()).join(", "))}</small></span><span class="k">${fmt(m.k)} kcal · ${fmt(m.p)} g P</span><button class="ghost del" type="button" data-del="${m.id}" aria-label="Delete meal">✕</button></div>`).join("")}
       ${c ? `<div class="pills">${METRICS.filter(m => c[m.k]).map(m => `<span class="pill" style="--c:${m.color}">${esc(m.label.split(" ")[0])} ${c[m.k]}/5</span>`).join("")}${(c.symptoms || []).map(s => `<span class="pill warn">${esc(s)}</span>`).join("")}</div>${c.note ? `<p class="note">${esc(c.note)}</p>` : ""}` : `<p class="empty small">No check-in.</p>`}
+      ${acts.filter(a => a.day === d).length ? `<div class="hline">${acts.filter(a => a.day === d).map(a => `${esc(a.title)} ${a.minutes} min`).join(" · ")}</div>` : ""}
       ${h ? `<div class="hline">${HEALTH.filter(x => h[x.k] != null).map(x => `${esc(x.label)} ${fmt(h[x.k], x.d)}${x.unit}`).join(" · ")}</div>` : ""}
     </article>`;
   }).join("");
@@ -200,6 +201,19 @@ export function analyse() {
     const r = pearson(xs, ys);
     if (r != null && Math.abs(r) >= 0.3) links.push({ fct, m, r, n: xs.length });
   }
+  // Activities: compare how you felt on days you did each kind of activity vs days you didn't.
+  // Sleep looks at activity the day before (it's rated the next morning).
+  const acts = store.get("activities", []);
+  const actDays = {}; for (const a of acts) (actDays[a.type] || (actDays[a.type] = {}))[a.day] = ((actDays[a.type] || {})[a.day] || 0) + a.minutes;
+  const anyDays = {}; for (const a of acts) anyDays[a.day] = (anyDays[a.day] || 0) + a.minutes;
+  const actFx = [];
+  const ACT_LABEL = { meditation: "meditation", yoga: "yoga", workout: "a workout", walk: "a walk", other: "other activity", any: "any activity" };
+  for (const [type, map] of [...Object.entries(actDays), ["any", anyDays]]) for (const m of METRICS) {
+    const yes = [], no = [];
+    for (const d of ciDays) { const v = cis[d][m.k]; if (!v) continue; (map[m.prevDay ? addDays(d, -1) : d] ? yes : no).push(v); }
+    if (yes.length >= 3 && no.length >= 3) { const diff = mean(yes) - mean(no); if (Math.abs(diff) >= 0.4) actFx.push({ type, label: ACT_LABEL[type] || type, m, diff, nYes: yes.length, nNo: no.length, a: mean(yes), b: mean(no) }); }
+  }
+  actFx.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
   foodFx.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
   sympFx.sort((a, b) => b.gap - a.gap);
   links.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
@@ -207,7 +221,7 @@ export function analyse() {
   const today = dayKey(new Date());
   const win = (from, to, k) => { const v = []; for (let i = from; i < to; i++) { const c = cis[addDays(today, -i)]; if (c && c[k]) v.push(c[k]); } return v; };
   const weeks = METRICS.map(m => ({ m, now: win(0, 7, m.k), before: win(7, 14, m.k) }));
-  return { ciDays, foodFx, sympFx, links, weeks, food, cis, hl };
+  return { ciDays, foodFx, sympFx, links, actFx, weeks, food, cis, hl };
 }
 
 function chart(cis, food) {
@@ -250,13 +264,14 @@ function renderInsights() {
   }).join("");
   const fx = A.foodFx.slice(0, 8).map(f => `<li><span class="badge ${f.diff > 0 ? "good" : "bad"}">${f.diff > 0 ? "▲" : "▼"} ${fmt(Math.abs(f.diff), 1)}</span><span><b>${esc(short(f.name))}</b>: ${esc(f.m.label.toLowerCase())} averaged ${fmt(f.a, 1)} on ${f.m.prevDay ? "nights after" : "days with or after"} it, vs ${fmt(f.b, 1)} otherwise <small>(${f.nYes} vs ${f.nNo} days)</small></span></li>`).join("");
   const sx = A.sympFx.slice(0, 6).map(s => `<li><span class="badge bad">${esc(s.s)}</span><span>Reported on <b>${s.ey} of ${s.en}</b> days with or after <b>${esc(short(s.name))}</b>, vs ${s.ny} of ${s.nn} other days</span></li>`).join("");
+  const ax = A.actFx.slice(0, 6).map(f => `<li><span class="badge ${f.diff > 0 ? "good" : "bad"}">${f.diff > 0 ? "▲" : "▼"} ${fmt(Math.abs(f.diff), 1)}</span><span>${f.m.prevDay ? "After days with" : "On days with"} <b>${esc(f.label)}</b>, ${esc(f.m.label.toLowerCase())} averaged ${fmt(f.a, 1)}, vs ${fmt(f.b, 1)} otherwise <small>(${f.nYes} vs ${f.nNo} days)</small></span></li>`).join("");
   const lk = A.links.slice(0, 6).map(l => `<li><span class="badge ${l.r > 0 ? "good" : "bad"}">r ${l.r > 0 ? "+" : "−"}${fmt(Math.abs(l.r), 2)}</span><span>More ${esc(l.fct.label)} went with ${l.r > 0 ? "better" : "worse"} ${esc(l.m.label.toLowerCase())} <small>(${l.n} days)</small></span></li>`).join("");
   $("#insBody").innerHTML = `
     <section class="panel"><div class="panel-head"><h2>This week</h2><span class="eyebrow">${n} days checked in</span></div><div class="tiles">${tiles}</div></section>
     <section class="panel"><h2>How you felt, last 30 days</h2>${chart(A.cis, A.food)}</section>
     <div class="grid">
       <section class="panel"><h2>Foods that may matter</h2>${fx || sx ? `<ul class="fx">${fx}${sx}</ul>` : `<p class="empty">No clear food patterns yet. Keep logging. Foods need at least 3 days with and 3 without to be compared.</p>`}</section>
-      <section class="panel"><h2>Nutrition, sleep and activity</h2>${lk ? `<ul class="fx">${lk}</ul>` : `<p class="empty">No strong links yet between your nutrients, steps or sleep and how you feel.</p>`}
+      <section class="panel"><h2>Movement, sleep and nutrition</h2>${ax || lk ? `<ul class="fx">${ax}${lk}</ul>` : `<p class="empty">No strong links yet between your movement, nutrients or sleep and how you feel.</p>`}
         <p class="source" style="margin:0">r runs from −1 to +1. Around 0.3 is a weak hint and above 0.6 is a strong one.</p></section>
     </div>
     <section class="panel"><div class="panel-head"><h2>Summary in plain words</h2><button class="primary" type="button" id="aiSum"${NM.sample ? "" : " hidden"}>Ask AI for a summary</button></div>
@@ -272,6 +287,7 @@ async function aiSummary() {
     ...A.weeks.map(w => `${w.m.label}: ${w.now.length ? fmt(mean(w.now), 1) : "n/a"} this week, ${w.before.length ? fmt(mean(w.before), 1) : "n/a"} last week`),
     ...A.foodFx.slice(0, 10).map(f => `${short(f.name)}: ${f.m.label} ${fmt(f.a, 1)} when eaten (${f.nYes} days) vs ${fmt(f.b, 1)} otherwise (${f.nNo} days)`),
     ...A.sympFx.slice(0, 8).map(s => `${s.s} on ${s.ey}/${s.en} days with ${short(s.name)} vs ${s.ny}/${s.nn} otherwise`),
+    ...A.actFx.slice(0, 8).map(f => `${f.label}: ${f.m.label} ${fmt(f.a, 1)} on those days (${f.nYes}) vs ${fmt(f.b, 1)} otherwise (${f.nNo})`),
     ...A.links.slice(0, 8).map(l => `${l.fct.label} vs ${l.m.label}: r=${fmt(l.r, 2)} over ${l.n} days`),
   ];
   const prompt = `You are a careful, encouraging nutrition coach. Here are patterns from one person's own food and wellbeing log (scores are 1-5; ${A.ciDays.length} days logged). They are correlations from small samples, not proof.
@@ -292,6 +308,7 @@ $("#exBtn").addEventListener("click", () => {
     db.saveMeals(db.meals().filter(m => !m.example));
     const c = db.checkins(); for (const k in c) if (c[k].example) delete c[k]; db.saveCheckins(c);
     const h = db.health(); for (const k in h) if (h[k].example) delete h[k]; db.saveHealth(h);
+    store.set("activities", store.get("activities", []).filter(a => !a.example));
   } else {
     const menu = [
       { title: "Chickpea curry with rice", items: [["Chickpeas, cooked or canned", "legume", 200], ["White rice, cooked", "grain", 180], ["Onion", "aromatic", 80], ["Tomato", "veg", 120]], k: 640, p: 22, c: 105, f: 14, fi: 16 },
@@ -300,7 +317,7 @@ $("#exBtn").addEventListener("click", () => {
       { title: "Oats with banana and peanut butter", items: [["Rolled oats", "grain", 60], ["Banana", "fruit", 118], ["Peanut butter", "nut", 16]], k: 420, p: 13, c: 70, f: 12, fi: 9 },
       { title: "Egg and spinach scramble", items: [["Egg, whole", "protein", 150], ["Spinach", "leafy", 60], ["Bread, whole wheat", "grain", 64]], k: 430, p: 29, c: 30, f: 20, fi: 6 },
     ];
-    const meals = db.meals(), cis = db.checkins(), hl = db.health();
+    const meals = db.meals(), cis = db.checkins(), hl = db.health(), acts = store.get("activities", []);
     let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     for (let i = 20; i >= 0; i--) {
       const day = addDays(dayKey(new Date()), -i);
@@ -309,18 +326,22 @@ $("#exBtn").addEventListener("click", () => {
       const chick = picks.some(p => p === menu[0]) || meals.some(m => m.example && m.day === addDays(day, -1) && m.title === menu[0].title);
       const chicken = picks.some(p => p === menu[1]);
       const steps = Math.round(4000 + rnd() * 7000);
-      if (!cis[day]) cis[day] = { example: true, energy: Math.max(1, Math.min(5, Math.round(2.6 + (chicken ? 1 : 0) + steps / 9000 + rnd() - 0.5))), mood: Math.max(1, Math.min(5, Math.round(3 + rnd() * 1.6 - 0.5))), digestion: Math.max(1, Math.min(5, Math.round((chick ? 2.2 : 3.9) + rnd() - 0.5))), sleep: Math.max(1, Math.min(5, Math.round(3 + rnd() * 1.5 - 0.5))), symptoms: chick && rnd() > 0.3 ? ["Bloating"] : [], note: "" };
+      const didYoga = rnd() > 0.55, didMed = rnd() > 0.5;
+      if (didYoga) acts.push({ id: uid(), example: true, type: "yoga", title: "Gentle digestion flow", minutes: 10, day, at: new Date(day + "T18:30").toISOString(), completed: true });
+      if (didMed) acts.push({ id: uid(), example: true, type: "meditation", title: "Calm breathing", minutes: 5, day, at: new Date(day + "T21:30").toISOString(), completed: true });
+      if (!cis[day]) cis[day] = { example: true, energy: Math.max(1, Math.min(5, Math.round(2.6 + (chicken ? 1 : 0) + steps / 9000 + rnd() - 0.5))), mood: Math.max(1, Math.min(5, Math.round(2.8 + (didMed ? 0.9 : 0) + rnd() * 1.2 - 0.5))), digestion: Math.max(1, Math.min(5, Math.round((chick ? 2.2 : 3.9) + (didYoga ? 0.7 : 0) + rnd() - 0.5))), sleep: Math.max(1, Math.min(5, Math.round(3 + rnd() * 1.5 - 0.5))), symptoms: chick && rnd() > 0.3 ? ["Bloating"] : [], note: "" };
       if (!hl[day]) hl[day] = { example: true, steps, sleepH: Math.round((6 + rnd() * 2.5) * 10) / 10, restHR: Math.round(60 + rnd() * 8) };
     }
-    db.saveMeals(meals); db.saveCheckins(cis); db.saveHealth(hl);
+    db.saveMeals(meals); db.saveCheckins(cis); db.saveHealth(hl); store.set("activities", acts);
   }
-  renderLog(); renderInsights();
+  renderLog(); renderInsights(); NM.renderMove?.();
 });
 
 // ---------- views ----------
 export function renderLog() { renderCheckin(); renderDiary(); $("#hBox").hidden = !window.NutriHealthSync; }
 const ROUTES = {
   kitchen: { view: "cook", page: "kitchen", name: "Kitchen", tag: "Snap what you have. See the nutrition, get portions that fit your targets, and a recipe to cook them." },
+  move: { view: "move", page: "move", name: "Move", tag: "Breathe, stretch and move. Every session shows up in your Health insights." },
   health: { view: "log", page: "health", name: "Health", tag: "Log what you ate and how you feel, and see which foods suit you." },
   insights: { view: "insights", page: "health", name: "Health", tag: "Log what you ate and how you feel, and see which foods suit you." },
 };
@@ -328,11 +349,12 @@ const ALIASES = { cook: "kitchen", log: "health" };
 function route() {
   let h = location.hash.slice(1); h = ALIASES[h] || h;
   const r = ROUTES[h] || ROUTES.kitchen;
-  ["cook", "log", "insights"].forEach(k => { $("#view-" + k).hidden = k !== r.view; });
+  ["cook", "move", "log", "insights"].forEach(k => { $("#view-" + k).hidden = k !== r.view; });
   document.querySelectorAll(".bottomnav a").forEach(a => a.setAttribute("aria-current", a.dataset.page === r.page ? "page" : "false"));
   $("#pageName").textContent = r.name; $("#pageTag").textContent = r.tag;
   document.title = "NutriMe " + r.name;
   if (r.view === "log") renderLog();
+  if (r.view === "move") NM.renderMove?.();
   if (r.view === "insights") renderInsights();
   window.scrollTo(0, 0);
 }

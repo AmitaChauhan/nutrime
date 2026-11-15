@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>NutriMe</title>
-<meta name="description" content="Snap your ingredients and see the nutrition, balanced portions and a recipe. Then log how you feel and learn which foods suit you.">
+<meta name="description" content="Snap your ingredients and see the nutrition, balanced portions and a recipe. Add short yoga, breathing and workouts, then learn which foods and habits suit you.">
 <meta name="theme-color" content="#101612">
-<meta property="og:title" content="NutriMe: eat well, feel better">
+<meta property="og:title" content="NutriMe: your one stop for health and mood">
 <meta property="og:description" content="Snap your ingredients and see the nutrition, balanced portions and a recipe. Then learn which foods suit you.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232F6B45'/%3E%3Cpath d='M34 15c4-6 11-7 15-5-2 5-8 8-15 5z' fill='%237CC294'/%3E%3Ccircle cx='32' cy='36' r='19' fill='%23F1F4EF'/%3E%3Crect x='22' y='29' width='8' height='5' rx='1.5' fill='%232C6FA8'/%3E%3Crect x='34' y='29' width='8' height='5' rx='1.5' fill='%23E2AE4C'/%3E%3Cpath d='M21 38h22c0 7-5 11-11 11s-11-4-11-11z' fill='%23C2475A'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -116,7 +116,7 @@ p { margin: 0; text-wrap: pretty; }
 .float-card { position: absolute; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font-size: 12px; box-shadow: 0 16px 40px -18px rgba(0,0,0,.5); display: none; }
 .float-card .k { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .float-card .vv { font-family: var(--display); font-weight: 800; font-size: 15px; margin-top: 2px; }
-.fc-1 { left: -36px; top: 70px; z-index: 2; }
+.fc-1 { left: -96px; top: 120px; z-index: 2; }
 .fc-2 { right: -30px; bottom: 80px; z-index: 2; }
 .dots { display: flex; gap: 4px; margin-top: 6px; }
 .dots i { width: 14px; height: 14px; border-radius: 4px; background: var(--sunk); }
@@ -133,7 +133,7 @@ section { padding: 72px 0; }
 
 /* two parts */
 .parts { display: grid; gap: 16px; }
-@media (min-width: 860px) { .parts { grid-template-columns: 1fr 1fr; gap: 20px; } }
+@media (min-width: 1000px) { .parts { grid-template-columns: repeat(3, 1fr); gap: 20px; } .part { padding: 32px 28px; } }
 .part { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 28px 24px; display: flex; flex-direction: column; gap: 18px; }
 .band .part { background: var(--bg); }
 @media (min-width: 720px) { .part { padding: 36px 32px; } }
@@ -227,6 +227,7 @@ footer .brand svg { width: 24px; height: 24px; }
     <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
     <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M11 18h2"/></symbol>
     <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l2 2"/></symbol>
+    <symbol id="i-move" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v6M6 9.5l6 1.5 6-1.5M12 13l-4 7M12 13l4 7"/></symbol>
     <symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></symbol>
   </defs>
 </svg>
@@ -237,6 +238,7 @@ footer .brand svg { width: 24px; height: 24px; }
     <nav class="nav-links" aria-label="Sections">
       <a href="#kitchen">Kitchen</a>
       <a href="#health">Health</a>
+      <a href="#move">Move</a>
       <a href="#how">How it works</a>
       <a href="#privacy">Privacy</a>
     </nav>
@@ -248,9 +250,9 @@ footer .brand svg { width: 24px; height: 24px; }
   <div class="hero">
     <div class="wrap">
       <div>
-        <p class="eyebrow">Your food, your body, one app</p>
-        <h1 style="margin-top:14px">Snap what's in your kitchen. <span class="hl">Eat what suits you.</span></h1>
-        <p class="lede">NutriMe reads a photo of your ingredients, shows you the protein, carbs, fat, fiber and calories, balances the portions and gives you a recipe. Then it helps you see which meals leave you feeling your best.</p>
+        <p class="eyebrow">Food · Movement · Mood</p>
+        <h1 style="margin-top:14px">Your one stop for <span class="hl">health and mood.</span></h1>
+        <p class="lede">What you eat, how you move and how you feel, together in one app. Snap your ingredients for a balanced meal and recipe, follow short yoga, breathing and beginner workouts, and see which habits leave you feeling your best.</p>
         <div class="ctas">
           <a class="btn btn-primary" href="/">Open NutriMe <svg><use href="#i-arrow"/></svg></a>
           <a class="btn btn-ghost" href="#how">See how it works</a>
@@ -297,8 +299,8 @@ footer .brand svg { width: 24px; height: 24px; }
   <section class="band" id="kitchen">
     <div class="wrap">
       <div class="sec-head">
-        <p class="eyebrow">Two parts, one app</p>
-        <h2>Plan the meal. Then learn what it did for you.</h2>
+        <p class="eyebrow">Three parts, one app</p>
+        <h2>Cook well, move a little, and see what helps.</h2>
       </div>
       <div class="parts">
         <article class="part">
@@ -330,8 +332,26 @@ footer .brand svg { width: 24px; height: 24px; }
           </div>
           <ul>
             <li><svg><use href="#i-check"/></svg><span>A meal log that fills itself from Kitchen</span></li>
-            <li><svg><use href="#i-check"/></svg><span>Insights that link what you ate to how you felt</span></li>
+            <li><svg><use href="#i-check"/></svg><span>Insights that link what you ate and how you moved to how you felt</span></li>
             <li><svg><use href="#i-check"/></svg><span>Steps, sleep and heart data from Health Connect in the Android app</span></li>
+          </ul>
+        </article>
+        <article class="part" id="move">
+          <div class="icon"><svg><use href="#i-move"/></svg></div>
+          <h3>NutriMe <span>Move</span></h3>
+          <p class="muted">Gentle sessions you can fit into a busy day, no gym or experience needed. Each one is logged for you automatically.</p>
+          <div class="nutrients">
+            <span class="chip">Breathing</span>
+            <span class="chip">Meditation</span>
+            <span class="chip">Yoga</span>
+            <span class="chip">Workouts</span>
+          </div>
+          <ul>
+            <li><svg><use href="#i-check"/></svg><span>Calm, box and 4-7-8 breathing, plus a quiet meditation timer</span></li>
+            <li><svg><use href="#i-check"/></svg><span>Ten-minute yoga flows for waking up, digestion and bedtime</span></li>
+            <li><svg><use href="#i-check"/></svg><span>Beginner workouts under 15 minutes. Every session has spoken cues and works offline</span></li>
+            <li><svg><use href="#i-check"/></svg><span>Log walks, gym or sport in a few taps</span></li>
+            <li><svg><use href="#i-check"/></svg><span>Every session feeds Health, so you can see if it lines up with better mood, sleep or digestion</span></li>
           </ul>
         </article>
       </div>
@@ -357,8 +377,8 @@ footer .brand svg { width: 24px; height: 24px; }
         </div>
         <div class="step">
           <div class="n">03</div>
-          <h3>Check in, learn, adjust</h3>
-          <p>Rate your energy, mood, digestion and sleep. NutriMe shows which meals tend to leave you feeling good.</p>
+          <h3>Move, check in, learn</h3>
+          <p>Do a short yoga flow, breathing session or workout, then rate your energy, mood, digestion and sleep. NutriMe shows what tends to leave you feeling good.</p>
         </div>
       </div>
     </div>
@@ -368,8 +388,8 @@ footer .brand svg { width: 24px; height: 24px; }
     <div class="wrap feel">
       <div>
         <p class="eyebrow">Food meets feeling</p>
-        <h2 style="margin-top:10px">Stop guessing which foods work for you.</h2>
-        <p class="lede" style="margin-top:14px">Every body is different. NutriMe puts your meals next to how you felt afterwards, so you can spot what lifts you up and what drags you down.</p>
+        <h2 style="margin-top:10px">Stop guessing what works for you.</h2>
+        <p class="lede" style="margin-top:14px">Every body is different. NutriMe puts your meals and sessions next to how you felt afterwards, so you can spot what lifts you up and what drags you down.</p>
       </div>
       <div class="insight-card" aria-label="Example weekly insight">
         <div class="k">This week · example</div>
@@ -381,6 +401,7 @@ footer .brand svg { width: 24px; height: 24px; }
           <span class="lab">Sleep</span><i class="c l2"></i><i class="c l2"></i><i class="c l1"></i><i class="c l3"></i><i class="c l3"></i><i class="c l1"></i><i class="c l2"></i>
         </div>
         <div class="callout"><b>Pattern spotted:</b> on days your lunch had 30 g or more of protein, your afternoon energy was higher.</div>
+        <div class="callout"><b>Pattern spotted:</b> on nights you did the bedtime yoga flow, you rated your sleep higher the next morning.</div>
       </div>
     </div>
   </section>
@@ -441,8 +462,8 @@ footer .brand svg { width: 24px; height: 24px; }
   <section class="final">
     <div class="wrap">
       <div class="box">
-        <h2>Your next meal can tell you something.</h2>
-        <p class="muted">Snap the ingredients, cook the balanced version, and notice how you feel.</p>
+        <h2>Eat well, move a little, feel better. All in one place.</h2>
+        <p class="muted">Snap a meal, try a ten-minute flow, and notice how you feel.</p>
         <a class="btn btn-primary" href="/">Open NutriMe <svg><use href="#i-arrow"/></svg></a>
       </div>
     </div>

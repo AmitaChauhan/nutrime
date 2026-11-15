@@ -89,7 +89,7 @@ dialog.gate input { width: 100%; font-size: 16px; }
 dialog.gate .acts { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 
 /* Tabs */
-.bottomnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(2, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding: 6px max(16px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.bottomnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border-top: 1px solid var(--line); padding: 6px max(16px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
 .bottomnav a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px; color: var(--muted); text-decoration: none; font-size: 12px; font-weight: 600; border-radius: 10px; }
 .bottomnav a svg { width: 24px; height: 24px; }
 .bottomnav a[aria-current="page"] { color: var(--accent); }
@@ -141,6 +141,27 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .badge { font-family: var(--mono); font-size: 12px; border-radius: 6px; padding: 2px 7px; white-space: nowrap; border: 1px solid var(--line); }
 .badge.good { color: var(--fiber); border-color: var(--fiber); }
 .badge.bad { color: var(--fat); border-color: var(--fat); }
+/* Move */
+.routines { display: flex; flex-direction: column; gap: 8px; }
+.routine { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px; background: var(--sunk); border-radius: 10px; }
+.routine b { display: block; }
+.routine small { color: var(--muted); font-size: 13px; }
+.chip.pick[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: transparent; }
+.row2 { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.row2 label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.player { position: fixed; inset: 0; z-index: 50; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; padding: calc(24px + env(safe-area-inset-top, 0px)) max(20px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); }
+.player .pl-top { position: absolute; top: calc(16px + env(safe-area-inset-top, 0px)); left: max(20px, env(safe-area-inset-left, 0px)); right: max(20px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 8px; }
+.player .pl-bar { height: 6px; border-radius: 3px; background: var(--sunk); overflow: hidden; }
+.player .pl-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s linear; }
+.player h3 { font-family: var(--display); font-weight: 900; font-size: clamp(24px, 7vw, 34px); margin: 0; text-wrap: balance; max-width: 22ch; }
+.player .pl-cue { color: var(--muted); max-width: 40ch; margin: 0; font-size: 16px; min-height: 3em; }
+.player .pl-time { font-family: var(--mono); font-size: clamp(48px, 16vw, 72px); font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1; }
+.player .pl-acts { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.player .pl-acts button { padding: 14px 20px; font-size: 16px; }
+.breathe { width: min(56vw, 240px); aspect-ratio: 1; max-width: 100%; display: grid; place-items: center; position: relative; }
+.breathe .circle { position: absolute; inset: 0; border-radius: 50%; background: var(--accent); opacity: .18; transform: scale(.55); transition: transform .2s linear; }
+.breathe .phase { position: relative; font-weight: 600; font-size: 18px; }
+@media (prefers-reduced-motion: reduce) { .breathe .circle, .player .pl-bar i { transition: none; } }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; opacity: 0; }
 .thumbs { display: flex; gap: 8px; flex-wrap: wrap; }
 .thumbs img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
@@ -240,6 +261,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   </header>
   <nav class="bottomnav" aria-label="NutriMe">
     <a href="#kitchen" data-page="kitchen" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3v8a3 3 0 0 0 3 3v7M9 3v5M12 3v8a3 3 0 0 1-3 3"/><path d="M18 21V3c-2.2 1.2-3 3.7-3 7v4h3"/></svg>Kitchen</a>
+    <a href="#move" data-page="move"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="4.5" r="2"/><path d="M12 7v6M5 10l7 2 7-2M8 21l4-8 4 8"/></svg>Move</a>
     <a href="#health" data-page="health"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 1 0-7.1 7.1L12 21.5l8.8-8.8a5 5 0 0 0 0-7.1z"/><path d="M3.5 12h4l2-3 3 6 2-3h6"/></svg>Health</a>
   </nav>
 
@@ -408,6 +430,55 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
         <section class="panel" aria-labelledby="h-diary"><h2 id="h-diary">Your diary</h2><div class="diary" id="diary"></div></section>
       </div>
     </div>
+  </div>
+
+  <div id="view-move" hidden>
+    <div class="status" id="moveMsg" hidden style="margin-bottom:12px"></div>
+    <div class="grid">
+      <div class="col">
+        <section class="panel" aria-labelledby="h-mvweek"><h2 id="h-mvweek">Your week</h2><div id="mvWeek"></div></section>
+        <section class="panel" aria-labelledby="h-breathe">
+          <h2 id="h-breathe">Breathe</h2>
+          <div class="chips" id="mvBreath"></div>
+          <p class="source" style="margin:0" id="mvBreathWhy"></p>
+          <div class="chips" id="mvBreathMin"></div>
+          <div><button type="button" class="primary" id="mvBreathGo">Start breathing</button></div>
+        </section>
+        <section class="panel" aria-labelledby="h-quiet">
+          <h2 id="h-quiet">Quiet meditation</h2>
+          <p class="source" style="margin:0">A soft chime starts, marks halfway and ends your sit.</p>
+          <div class="chips" id="mvQuietMin"></div>
+          <div><button type="button" class="primary" id="mvQuietGo">Start meditation</button></div>
+        </section>
+      </div>
+      <div class="col">
+        <section class="panel" aria-labelledby="h-yoga"><h2 id="h-yoga">Yoga</h2><div class="routines" id="mvYoga"></div></section>
+        <section class="panel" aria-labelledby="h-workout"><h2 id="h-workout">Workouts</h2><div class="routines" id="mvWorkout"></div>
+          <label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="mvVoice"> Read each step out loud</label></section>
+        <section class="panel" aria-labelledby="h-mvlog">
+          <h2 id="h-mvlog">Log other activity</h2>
+          <div class="row2">
+            <label for="mvLogType">Activity<select id="mvLogType"><option value="walk">Walk</option><option value="workout">Gym or workout</option><option value="yoga">Yoga class</option><option value="meditation">Meditation</option><option value="other">Sport or other</option></select></label>
+            <label for="mvLogMin">Minutes<input id="mvLogMin" type="number" min="1" max="600" inputmode="numeric" style="width:90px;font-family:var(--mono)"></label>
+            <label for="mvLogDay">Day<input id="mvLogDay" type="date"></label>
+            <button type="button" id="mvLogSave">Save</button>
+          </div>
+          <div class="status" id="mvLogMsg" hidden></div>
+        </section>
+        <section class="panel" aria-labelledby="h-mvrecent"><h2 id="h-mvrecent">Recent sessions</h2><div class="diary" id="mvRecent"></div></section>
+      </div>
+    </div>
+    <p class="source" style="margin-top:16px">Move gently and stop if anything hurts. If you have an injury, a heart or blood pressure condition, or are pregnant, check with a doctor first.</p>
+  </div>
+
+  <div class="player" id="player" hidden role="dialog" aria-modal="true" aria-labelledby="plStep">
+    <div class="pl-top"><div style="display:flex;justify-content:space-between;gap:8px"><span class="eyebrow" id="plTitle"></span><span class="eyebrow" id="plCount"></span></div><div class="pl-bar"><i id="plBar"></i></div></div>
+    <div class="breathe" id="plBreath" hidden><div class="circle" id="plCircle"></div><div class="phase" id="plPhase"></div></div>
+    <h3 id="plStep"></h3>
+    <p class="pl-cue" id="plCue"></p>
+    <div class="pl-time" id="plTime" aria-live="off"></div>
+    <div class="source" id="plNext"></div>
+    <div class="pl-acts"><button type="button" class="primary" id="plPause">Pause</button><button type="button" id="plSkip">Skip</button><button type="button" class="ghost" id="plStop">Stop</button></div>
   </div>
 
   <div id="view-insights" hidden>
@@ -1132,7 +1203,7 @@ initClaude();
 detectServer();
 
 window.NM = { store, fmt, esc, S, setStatus, errCopy, get current() { return current; }, get sample() { return sample; } };
-import("./journal.js").catch(e => console.error("journal failed to load", e));
+import("./move.js").then(() => import("./journal.js")).catch(e => console.error("NutriMe page failed to load", e));
 
 if (isNative) {
   const sc = document.createElement("script"); sc.type = "module"; sc.src = "native-health.js"; document.head.appendChild(sc);
